@@ -145,6 +145,26 @@
         "drift",
         "aether"
       ]
+    },
+    {
+      "id": "red-water-sunset",
+      "path": "wallpapers/assets/red-water-sunset.jpg",
+      "tags": [
+        "red",
+        "warm",
+        "light",
+        "calm",
+        "clean"
+      ]
+    },
+    {
+      "id": "green-volcano",
+      "path": "wallpapers/assets/green-volcano.jpg",
+      "tags": [
+        "dark",
+        "clean",
+        "calm"
+      ]
     }
   ],
   "components": {
@@ -171,7 +191,37 @@
       "ember": "wlogout/ember/style.css",
       "drift": "wlogout/drift/style.css",
       "windows": "wlogout/windows/style.css"
+    },
+    "gtk": {
+      "obsidian": "Orchis-Dark",
+      "crimson": "Orchis-Dark",
+      "aether": "adw-gtk3-dark",
+      "ember": "Dracula",
+      "drift": "adw-gtk3-dark",
+      "windows": "adw-gtk3-dark"
+    },
+    "swaync": {
+      "obsidian": "swaync/obsidian",
+      "crimson": "swaync/crimson",
+      "aether": "swaync/aether",
+      "ember": "swaync/ember",
+      "drift": "swaync/drift",
+      "windows": "swaync/windows"
+    },
+    "icon": {
+      "obsidian": "Papirus-Dark",
+      "crimson": "Papirus-Dark",
+      "aether": "Papirus-Dark",
+      "ember": "Papirus-Dark",
+      "drift": "Papirus-Dark",
+      "windows": "Papirus-Dark"
     }
+  },
+  "defaults": {
+    "color-scheme": "prefer-dark",
+    "cursor-theme": "Bibata-Modern-Classic",
+    "cursor-size": 24,
+    "font-name": "JetBrainsMono Nerd Font Mono 12"
   },
   "themes": {
     "obsidian": {
@@ -183,7 +233,10 @@
       "components": {
         "waybar": "obsidian",
         "wofi": "obsidian",
-        "wlogout": "obsidian"
+        "wlogout": "obsidian",
+        "gtk": "obsidian",
+        "swaync": "obsidian",
+        "icon": "obsidian"
       }
     },
     "crimson": {
@@ -195,7 +248,10 @@
       "components": {
         "waybar": "crimson",
         "wofi": "crimson",
-        "wlogout": "crimson"
+        "wlogout": "crimson",
+        "gtk": "crimson",
+        "swaync": "crimson",
+        "icon": "crimson"
       }
     },
     "aether": {
@@ -208,7 +264,10 @@
       "components": {
         "waybar": "aether",
         "wofi": "aether",
-        "wlogout": "aether"
+        "wlogout": "aether",
+        "gtk": "aether",
+        "swaync": "aether",
+        "icon": "aether"
       }
     },
     "ember": {
@@ -220,7 +279,10 @@
       "components": {
         "waybar": "ember",
         "wofi": "ember",
-        "wlogout": "ember"
+        "wlogout": "ember",
+        "gtk": "ember",
+        "swaync": "ember",
+        "icon": "ember"
       }
     },
     "drift": {
@@ -232,7 +294,10 @@
       "components": {
         "waybar": "drift",
         "wofi": "drift",
-        "wlogout": "drift"
+        "wlogout": "drift",
+        "gtk": "drift",
+        "swaync": "drift",
+        "icon": "drift"
       }
     },
     "windows": {
@@ -244,7 +309,10 @@
       "components": {
         "waybar": "windows",
         "wofi": "windows",
-        "wlogout": "windows"
+        "wlogout": "windows",
+        "gtk": "windows",
+        "swaync": "windows",
+        "icon": "windows"
       }
     }
   }

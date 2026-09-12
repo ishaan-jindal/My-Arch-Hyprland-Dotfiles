@@ -45,7 +45,7 @@ else
     if ! pgrep -x awww-daemon >/dev/null; then
         awww-daemon & sleep 0.3
     fi
-    awww img "$full" --transition-type none
+    awww img "$full" -t wipe
 fi
 
 rm -f "$current_wall"

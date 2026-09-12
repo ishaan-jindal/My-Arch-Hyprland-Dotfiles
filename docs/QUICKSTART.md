@@ -36,7 +36,7 @@ mv ~/.config/nvim ~/.config-backup/nvim 2>/dev/null || true
 ## 4) Stow dotfiles
 
 ```bash
-stow hypr nvim waybar wlogout wofi
+stow hypr nvim waybar wlogout wofi gtk xdg-portal
 ```
 
 This creates symlinks into `~/.config`.

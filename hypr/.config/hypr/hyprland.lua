@@ -26,6 +26,10 @@ hl.env("XCURSOR_SIZE", "24")
 hl.env("HYPRCURSOR_SIZE", "24")
 hl.env("XCURSOR_THEME", "Bibata-Modern-Classic")
 hl.env("HYPRCURSOR_THEME", "Bibata-Modern-Classic")
+hl.env("XDG_CURRENT_DESKTOP", "Hyprland")
+hl.env("QT_QPA_PLATFORMTHEME", "gtk3")
+hl.env("QT_QPA_PLATFORM", "wayland")
+hl.env("GDK_BACKEND", "wayland,x11")
 
 
 ------------------
@@ -33,9 +37,10 @@ hl.env("HYPRCURSOR_THEME", "Bibata-Modern-Classic")
 ------------------
 
 hl.on("hyprland.start", function()
-  hl.exec_cmd("/usr/lib/xdg-desktop-portal")
   hl.exec_cmd("nm-applet")
   hl.exec_cmd("waybar")
+  hl.exec_cmd("swaync")
+  hl.exec_cmd("pkill -x dunst")
   hl.exec_cmd("wl-paste --type text --watch cliphist store")
   hl.exec_cmd("wl-paste --type image --watch cliphist store")
   hl.exec_cmd("sleep 0.5 && ~/.config/hypr/scripts/restore_wallpaper.sh")
@@ -231,8 +236,11 @@ hl.bind(mainMod .. " + SHIFT + W", hl.dsp.exec_cmd("waybar"))
 -- Night light
 hl.bind(mainMod .. " + N", hl.dsp.exec_cmd("~/.config/hypr/scripts/night_light_toggle.sh"))
 
--- Zoom
-hl.bind(mainMod .. " + E", hl.dsp.exec_cmd("hypr-zoom -target 5"))
+-- Zoom (built-in cursor:zoom_factor toggle, 2x default)
+hl.bind(mainMod .. " + Z", hl.dsp.exec_cmd("~/.config/hypr/scripts/zoom_toggle.sh"))
+
+-- File manager
+hl.bind(mainMod .. " + E", hl.dsp.exec_cmd("nemo"))
 
 -- Android emulator
 hl.bind(mainMod .. " + M",

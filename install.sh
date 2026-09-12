@@ -10,11 +10,17 @@ pacman_packages=(
     "waybar"
     "ghostty"
     "wofi"
-    "dunst"
+    "swaync"
+    "nemo"
+    "adw-gtk-theme"
+    "orchis-theme"
+    "papirus-icon-theme"
+    "nwg-look"
+    "xdg-desktop-portal-hyprland"
+    "xdg-desktop-portal-gtk"
     "polkit-kde-agent"
     "pipewire"
     "wireplumber"
-    "xdg-desktop-portal-hyprland"
     "qt5-wayland"
     "qt6-wayland"
     "noto-fonts"
@@ -29,7 +35,9 @@ pacman_packages=(
 )
 
 aur_packages=(
-  
+    # Optional 1:1 accents — skipped by default, gtk2 build pulls ~400MB+ GNOME/gtk clone.
+    # "gruvbox-gtk-theme-git"
+    # "catppuccin-gtk-theme-mocha"
 )
 # --- END CONFIGURATION ---
 
