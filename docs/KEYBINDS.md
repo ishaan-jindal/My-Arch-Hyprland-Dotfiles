@@ -7,6 +7,7 @@ Main modifier: `SUPER`
 - `Super + Return` → terminal (`ghostty`)
 - `Super + R` → app launcher (`wofi --show drun`)
 - `Super + B` → browser (`zen-browser`)
+- `Super + E` → file manager (`nemo`)
 - `Super + L` → logout menu (`wlogout`)
 - `Super + Q` → close active window
 
@@ -47,6 +48,7 @@ Main modifier: `SUPER`
 ## Other
 
 - `Super + N` → toggle night light (`hyprsunset`)
+- `Super + Z` → toggle cursor zoom (2x, `zoom_toggle.sh`)
 - `Super + M` → launch Android emulator command from config
 - `Super + Shift + K` → stop waybar
 - `Super + Shift + W` → start waybar

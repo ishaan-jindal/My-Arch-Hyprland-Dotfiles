@@ -16,9 +16,15 @@ vim.diagnostic.config({
   severity_sort = true,
 })
 
--- Show diagnostics on hover (CursorHold)
+-- Show diagnostics on hover (CursorHold), skipped when a float is already open
 vim.api.nvim_create_autocmd({ "CursorHold", "CursorHoldI" }, {
   callback = function()
+    for _, win in ipairs(vim.api.nvim_list_wins()) do
+      local ok, cfg = pcall(vim.api.nvim_win_get_config, win)
+      if ok and cfg.relative ~= "" then
+        return
+      end
+    end
     vim.diagnostic.open_float(nil, { focus = false })
   end,
 })

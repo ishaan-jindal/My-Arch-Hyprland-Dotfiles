@@ -1,0 +1,4 @@
+theme = Gruvbox Dark Hard
+shell-integration = fish
+window-save-state = never
+working-directory = home

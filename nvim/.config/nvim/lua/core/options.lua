@@ -39,8 +39,19 @@ vim.opt.timeoutlen = 400
 vim.opt.splitbelow = true
 vim.opt.splitright = true
 
--- Persistent undo
+-- Clipboard (Wayland-aware; falls back gracefully)
+vim.opt.clipboard = "unnamedplus"
+
+-- Files: persistent undo without swap/backup clutter
 vim.opt.undofile = true
+vim.opt.backup = false
+vim.opt.writebackup = false
+vim.opt.swapfile = false
+
+-- UI polish (lualine handles mode/status)
+vim.opt.showmode = false
+vim.opt.laststatus = 3
+vim.opt.pumheight = 10
 
 -- Completion menu
 vim.opt.completeopt = { "menu", "menuone", "noselect" }

@@ -24,11 +24,16 @@ This repository includes a complete desktop setup with:
 
 ```text
 .
-├── hypr/       # Hyprland config, scripts, wallpapers
-├── waybar/     # Waybar config and per-theme styles
-├── wofi/       # Wofi styles and per-theme styles
-├── wlogout/    # Wlogout layout + per-theme styles
+├── hypr/       # Hyprland config, scripts, themes, wallpapers
+├── waybar/     # Generated symlinks (active theme) — sources live under hypr/.../themes/waybar/
+├── wofi/       # Generated symlink (active theme) — sources live under hypr/.../themes/wofi/
+├── wlogout/    # Wlogout layout + generated symlink — sources under hypr/.../themes/wlogout/
 ├── nvim/       # Neovim config
+├── fish/       # Fish shell config
+├── ghostty/    # Ghostty terminal config
+├── gtk/        # GTK seed settings (overwritten by theme_toggle.sh apply_gtk)
+├── xdg-portal/ # Portal preferences (gtk file picker + hyprland screencast)
+├── docs/       # Quick start, themes, keybindings
 ├── install.sh  # Arch bootstrap script
 └── README.md
 ```

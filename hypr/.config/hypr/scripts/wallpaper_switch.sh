@@ -1,4 +1,5 @@
 #!/bin/bash
+set -u
 
 CONFIG="$HOME/.config/hypr/themes/themes.json"
 BASE="$HOME/.config/hypr/themes"
@@ -6,10 +7,20 @@ BASE="$HOME/.config/hypr/themes"
 THEME_STATE="$HOME/.cache/theme_state"
 WALL_STATE_PREFIX="$HOME/.cache/wallpaper_state_"
 
-current_wall="$HOME/.config/hypr/wallpapers/current"
+current_wall="$BASE/wallpapers/current"
 
-theme=$(cat "$THEME_STATE" 2>/dev/null)
-[ -z "$theme" ] && theme="gruvbox"
+theme=$(cat "$THEME_STATE" 2>/dev/null || true)
+if [ -z "${theme:-}" ] || ! jq -e --arg theme "$theme" '.themes[$theme]' "$CONFIG" >/dev/null 2>&1; then
+    theme="obsidian"
+fi
+
+notify_err() {
+    if command -v notify-send >/dev/null 2>&1; then
+        notify-send "$1" "$2"
+    else
+        echo "ERROR: $1: $2" >&2
+    fi
+}
 
 # ----------------------
 # get matching wallpapers
@@ -23,7 +34,7 @@ list=$(jq -r --arg theme "$theme" '
 ' "$CONFIG")
 
 if [ -z "$list" ]; then
-    notify-send "Wallpaper Error" "No wallpapers match theme: $theme"
+    notify_err "Wallpaper Error" "No wallpapers match theme: $theme"
     exit 1
 fi
 
@@ -36,10 +47,10 @@ full="$BASE/$path"
 # ----------------------
 # apply
 # ----------------------
-pkill mpvpaper >/dev/null 2>&1
+pkill mpvpaper >/dev/null 2>&1 || true
 
-if [[ "$full" =~ \.mp4$ ]]; then
-    pkill awww-daemon >/dev/null 2>&1
+if [[ "$full" == *.mp4 ]]; then
+    pkill awww-daemon >/dev/null 2>&1 || true
     mpvpaper -o "loop --no-audio --hwdec=auto --vo=gpu --profile=fast" "*" "$full" &
 else
     if ! pgrep -x awww-daemon >/dev/null; then
@@ -48,6 +59,7 @@ else
     awww img "$full" -t wipe
 fi
 
+mkdir -p "$(dirname "$current_wall")"
 rm -f "$current_wall"
 ln -s "$full" "$current_wall"
 

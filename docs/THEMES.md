@@ -36,7 +36,7 @@ When you run **theme toggle** (`Super + Shift + T`):
    - `~/.config/waybar/style.css`
    - `~/.config/wofi/style.css`
    - `~/.config/wlogout/style.css`
-   - `~/.config/hypr/wallpapers/current`
+   - `~/.config/hypr/themes/wallpapers/current`
    - `~/.config/swaync/config.json`
    - `~/.config/swaync/style.css`
 4. `waybar` is restarted, `swaync` is reloaded (or started, `dunst` killed).
@@ -49,10 +49,7 @@ When you run **theme toggle** (`Super + Shift + T`):
 The scripts track state in:
 
 - `~/.cache/theme_state`
-- `~/.cache/wallpaper_state_gruvbox`
-- `~/.cache/wallpaper_state_red`
-- `~/.cache/wallpaper_state_blue`
-- `~/.cache/wallpaper_state_windows`
+- `~/.cache/wallpaper_state_<theme>` (one per theme, e.g. `wallpaper_state_obsidian`)
 
 This preserves your last selected wallpaper per theme.
 
@@ -60,21 +57,21 @@ This preserves your last selected wallpaper per theme.
 
 `Super + T` opens wallpaper selection for the **current** theme only.
 
-- Images are loaded from `~/.config/hypr/wallpapers/<theme>/`
-- Accepted formats: `.jpg`, `.jpeg`, `.png`
-- Selection is applied using `swww`
+- Wallpapers are matched by tag in `themes.json` (`wallpapers[].tags` vs `themes.<name>.tags`)
+- Accepted formats: `.jpg`, `.jpeg`, `.png` (images via `awww`), `.mp4` (video via `mpvpaper`)
 
 ## Adding a new theme
 
 To add theme `mytheme`, create:
 
-- `hypr/.config/hypr/themes/waybar/mytheme/config.jsonc`
-- `hypr/.config/hypr/themes/waybar/mytheme/style.css`
+- `hypr/.config/hypr/themes/waybar/mytheme/style.css` (+ `config.jsonc`, or symlink
+  `../base/config.jsonc` if the shared top-bar layout works for the theme)
 - `hypr/.config/hypr/themes/wofi/mytheme/style.css`
 - `hypr/.config/hypr/themes/wlogout/mytheme/style.css`
-- `hypr/.config/hypr/themes/swaync/mytheme/config.json`
-- `hypr/.config/hypr/themes/swaync/mytheme/style.css`
-- `hypr/.config/hypr/wallpapers/mytheme/*`
+- `hypr/.config/hypr/themes/swaync/mytheme/style.css` (+ `config.json`, or symlink
+  `../base/config.json` — all current themes share the same base config)
+- Add wallpapers under `hypr/.config/hypr/themes/wallpapers/assets/` with `tags`
+  including `mytheme` (or a descriptor your theme's `tags` include)
 
 Then update `hypr/.config/hypr/themes/themes.json`:
 

@@ -1,4 +1,5 @@
 #!/bin/bash
+set -u
 
 CONFIG="$HOME/.config/hypr/themes/themes.json"
 BASE="$HOME/.config/hypr/themes"
@@ -11,11 +12,19 @@ waybar_config="$HOME/.config/waybar/config.jsonc"
 waybar_style="$HOME/.config/waybar/style.css"
 wofi_style="$HOME/.config/wofi/style.css"
 wlogout_style="$HOME/.config/wlogout/style.css"
-current_wall="$HOME/.config/hypr/wallpapers/current"
+current_wall="$BASE/wallpapers/current"
 swaync_config="$HOME/.config/swaync/config.json"
 swaync_style="$HOME/.config/swaync/style.css"
 gtk3_ini="$HOME/.config/gtk-3.0/settings.ini"
 gtk4_ini="$HOME/.config/gtk-4.0/settings.ini"
+
+notify_err() {
+    if command -v notify-send >/dev/null 2>&1; then
+        notify-send "$1" "$2"
+    else
+        echo "ERROR: $1: $2" >&2
+    fi
+}
 
 # ----------------------
 # GTK / GNOME sync (notifications + file picker)
@@ -97,10 +106,10 @@ apply_swaync() {
 set_wallpaper() {
     local file="$1"
 
-    pkill mpvpaper >/dev/null 2>&1
+    pkill mpvpaper >/dev/null 2>&1 || true
 
-    if [[ "$file" =~ \.mp4$ ]]; then
-        pkill awww-daemon >/dev/null 2>&1
+    if [[ "$file" == *.mp4 ]]; then
+        pkill awww-daemon >/dev/null 2>&1 || true
         mpvpaper -o "loop --no-audio --hwdec=auto --vo=gpu --profile=fast" "*" "$file" &
     else
         if ! pgrep -x "awww-daemon" >/dev/null; then
@@ -119,18 +128,20 @@ get_wallpaper() {
     # try saved
     local state="${WALL_STATE_PREFIX}${theme}"
     if [ -f "$state" ]; then
-        local saved=$(cat "$state")
-        [ -f "$saved" ] && echo "$saved" && return
+        local saved
+        saved=$(cat "$state")
+        [ -n "$saved" ] && [ -f "$saved" ] && echo "$saved" && return
     fi
 
     # fallback: first matching tag
     jq -r --arg theme "$theme" '
     .themes[$theme].tags as $tags |
+    select($tags != null) |
     .wallpapers[] |
     select(any(.tags[]; . as $t | $tags | index($t))) |
     .path
-    ' "$CONFIG" | head -n1 | while read -r path; do
-        echo "$BASE/$path"
+    ' "$CONFIG" | head -n1 | while IFS= read -r path; do
+        [ -n "$path" ] && [ "$path" != "null" ] && echo "$BASE/$path"
     done
 }
 
@@ -140,29 +151,57 @@ get_wallpaper() {
 apply_theme() {
     local theme="$1"
 
+    if ! jq -e --arg theme "$theme" '.themes[$theme]' "$CONFIG" >/dev/null; then
+        notify_err "Theme Error" "Unknown theme: $theme"
+        return 1
+    fi
+
+    local wall
     wall=$(get_wallpaper "$theme")
 
     if [ -z "$wall" ]; then
-      notify-send "Theme Error" "No wallpaper found for theme: $theme"
-      exit 1
+      notify_err "Theme Error" "No wallpaper found for theme: $theme"
+      return 1
     fi
 
     set_wallpaper "$wall"
 
-    waybar_key=$(jq -r ".themes[\"$theme\"].components.waybar" "$CONFIG")
-    wofi_key=$(jq -r ".themes[\"$theme\"].components.wofi" "$CONFIG")
-    wlogout_key=$(jq -r ".themes[\"$theme\"].components.wlogout" "$CONFIG")
-    gtk_key=$(jq -r ".themes[\"$theme\"].components.gtk // \"$theme\"" "$CONFIG")
-    swaync_key=$(jq -r ".themes[\"$theme\"].components.swaync // \"$theme\"" "$CONFIG")
-    icon_key=$(jq -r ".themes[\"$theme\"].components.icon // \"$theme\"" "$CONFIG")
+    # Single jq pass: waybar_key, wofi_key, wlogout_key, gtk_key, swaync_key,
+    # icon_key, waybar_path, wofi_path, wlogout_path, gtk_theme, icon_theme, swaync_dir
+    local resolved
+    resolved=$(jq -r --arg theme "$theme" '
+    . as $root |
+    $root.themes[$theme].components as $c |
+    [
+      $c.waybar,
+      $c.wofi,
+      $c.wlogout,
+      ($c.gtk // $theme),
+      ($c.swaync // $theme),
+      ($c.icon // $theme)
+    ] as [$wb, $wf, $wl, $gk, $sn, $ic] |
+    [
+      $wb, $wf, $wl, $gk, $sn, $ic,
+      $root.components.waybar[$wb],
+      $root.components.wofi[$wf],
+      $root.components.wlogout[$wl],
+      ($root.components.gtk[$gk] // $gk),
+      ($root.components.icon[$ic] // $ic),
+      $root.components.swaync[$sn]
+    ] | join("\u001f")
+    ' "$CONFIG")
 
-    waybar_path="$BASE/$(jq -r ".components.waybar[\"$waybar_key\"]" "$CONFIG")"
-    wofi_path="$BASE/$(jq -r ".components.wofi[\"$wofi_key\"]" "$CONFIG")"
-    wlogout_path="$BASE/$(jq -r ".components.wlogout[\"$wlogout_key\"]" "$CONFIG")"
-    gtk_theme=$(jq -r ".components.gtk[\"$gtk_key\"] // \"$gtk_key\"" "$CONFIG")
-    icon_theme=$(jq -r ".components.icon[\"$icon_key\"] // \"$icon_key\"" "$CONFIG")
-    swaync_dir="$BASE/$(jq -r ".components.swaync[\"$swaync_key\"]" "$CONFIG")"
+    IFS=$'\037' read -r waybar_key wofi_key wlogout_key gtk_key swaync_key icon_key \
+        waybar_rel wofi_rel wlogout_rel gtk_theme icon_theme swaync_rel <<< "$resolved"
 
+    local waybar_path="$BASE/$waybar_rel"
+    local wofi_path="$BASE/$wofi_rel"
+    local wlogout_path="$BASE/$wlogout_rel"
+    local swaync_dir="$BASE/$swaync_rel"
+
+    mkdir -p "$(dirname "$waybar_config")" "$(dirname "$wofi_style")" \
+        "$(dirname "$wlogout_style")" "$(dirname "$current_wall")" \
+        "$(dirname "$swaync_config")"
     rm -f "$waybar_config" "$waybar_style" "$wofi_style" "$wlogout_style" "$current_wall"
 
     [ ! -f "$waybar_path/config.jsonc" ] && echo "Waybar config missing: $waybar_path"
@@ -175,9 +214,8 @@ apply_theme() {
     ln -s "$wlogout_path" "$wlogout_style"
     ln -s "$wall" "$current_wall"
 
-    killall -q waybar
-    while pgrep -x waybar >/dev/null; do sleep 0.1; done
-    waybar &
+    pkill -x waybar >/dev/null 2>&1 || true
+    waybar >/dev/null 2>&1 & disown || true
 
     apply_gtk "$gtk_theme" "$icon_theme"
     apply_swaync "$swaync_dir"
