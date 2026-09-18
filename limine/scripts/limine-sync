@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+# Keep the Limine boot menu in sync with the active Hyprland theme.
+# Best effort: silently does nothing if the sudoers rule is missing.
+set -u
+
+if sudo -n /usr/local/bin/limine-deploy >/dev/null 2>&1; then
+    exit 0
+fi
+
+if command -v notify-send >/dev/null 2>&1; then
+    notify-send "Limine" "Theme sync failed — run: sudo /usr/local/bin/limine-deploy" || true
+fi
+exit 1

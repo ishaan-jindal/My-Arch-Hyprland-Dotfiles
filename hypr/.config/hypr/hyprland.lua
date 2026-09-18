@@ -2,7 +2,7 @@
 
 local mainMod = "SUPER"
 local terminal = "ghostty"
-local menu = "wofi --show drun"
+local menu = "qs ipc call shell openLauncher apps"
 local browser = "zen-browser"
 
 
@@ -37,10 +37,7 @@ hl.env("GDK_BACKEND", "wayland,x11")
 ------------------
 
 hl.on("hyprland.start", function()
-  hl.exec_cmd("nm-applet")
-  hl.exec_cmd("waybar")
-  hl.exec_cmd("swaync")
-  hl.exec_cmd("pkill -x dunst")
+  hl.exec_cmd("quickshell")
   hl.exec_cmd("wl-paste --type text --watch cliphist store")
   hl.exec_cmd("wl-paste --type image --watch cliphist store")
   hl.exec_cmd("sleep 0.5 && ~/.config/hypr/scripts/restore_wallpaper.sh")
@@ -166,7 +163,7 @@ hl.gesture({ fingers = 3, direction = "vertical", action = "special", workspace_
 hl.bind(mainMod .. " + RETURN", hl.dsp.exec_cmd(terminal))
 hl.bind(mainMod .. " + B", hl.dsp.exec_cmd(browser))
 hl.bind(mainMod .. " + R", hl.dsp.exec_cmd(menu))
-hl.bind(mainMod .. " + L", hl.dsp.exec_cmd("wlogout"))
+hl.bind(mainMod .. " + L", hl.dsp.exec_cmd("qs ipc call shell toggleSession"))
 
 -- Window actions
 hl.bind(mainMod .. " + Q", hl.dsp.window.close())
@@ -223,15 +220,17 @@ hl.bind(mainMod .. " + mouse:273", hl.dsp.window.resize(), { mouse = true })
 hl.bind("Print", hl.dsp.exec_cmd("hyprshot -m region -o ~/Pictures/"))
 
 -- Clipboard
-hl.bind(mainMod .. " + V", hl.dsp.exec_cmd("cliphist list | wofi --dmenu | cliphist decode | wl-copy"))
+hl.bind(mainMod .. " + V", hl.dsp.exec_cmd("qs ipc call shell openLauncher clipboard"))
 
--- Wallpaper / theme
-hl.bind(mainMod .. " + T", hl.dsp.exec_cmd("~/.config/hypr/scripts/wallpaper_switch.sh"))
-hl.bind(mainMod .. " + SHIFT + T", hl.dsp.exec_cmd("~/.config/hypr/scripts/theme_toggle.sh"))
+-- Wallpaper / theme picker (slide-down widget)
+hl.bind(mainMod .. " + T", hl.dsp.exec_cmd("qs ipc call shell openPicker wallpapers"))
+hl.bind(mainMod .. " + SHIFT + T", hl.dsp.exec_cmd("qs ipc call shell openPicker themes"))
 
--- Waybar
-hl.bind(mainMod .. " + SHIFT + K", hl.dsp.exec_cmd("killall waybar"))
-hl.bind(mainMod .. " + SHIFT + W", hl.dsp.exec_cmd("waybar"))
+-- Quickshell shell control
+hl.bind(mainMod .. " + C", hl.dsp.exec_cmd("qs ipc call shell toggleCenter"))
+hl.bind(mainMod .. " + K", hl.dsp.exec_cmd("qs ipc call shell toggleKeybinds"))
+hl.bind(mainMod .. " + SHIFT + K", hl.dsp.exec_cmd("killall quickshell"))
+hl.bind(mainMod .. " + SHIFT + W", hl.dsp.exec_cmd("quickshell"))
 
 -- Night light
 hl.bind(mainMod .. " + N", hl.dsp.exec_cmd("~/.config/hypr/scripts/night_light_toggle.sh"))
@@ -247,16 +246,16 @@ hl.bind(mainMod .. " + M",
   hl.dsp.exec_cmd("~/Android/Sdk/emulator/emulator -avd flutter_emulator -writable-system -no-snapshot"))
 
 -- Volume (repeating + locked)
-hl.bind("XF86AudioRaiseVolume", hl.dsp.exec_cmd("wpctl set-volume -l 1 @DEFAULT_AUDIO_SINK@ 5%+"),
+hl.bind("XF86AudioRaiseVolume", hl.dsp.exec_cmd("wpctl set-volume -l 1 @DEFAULT_AUDIO_SINK@ 1%+"),
   { repeating = true, locked = true })
-hl.bind("XF86AudioLowerVolume", hl.dsp.exec_cmd("wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-"),
+hl.bind("XF86AudioLowerVolume", hl.dsp.exec_cmd("wpctl set-volume @DEFAULT_AUDIO_SINK@ 1%-"),
   { repeating = true, locked = true })
 hl.bind("XF86AudioMute", hl.dsp.exec_cmd("wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"), { locked = true })
 hl.bind("XF86AudioMicMute", hl.dsp.exec_cmd("wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle"), { locked = true })
 
 -- Brightness (repeating + locked)
-hl.bind("XF86MonBrightnessUp", hl.dsp.exec_cmd("brightnessctl -e4 -n2 set 5%+"), { repeating = true, locked = true })
-hl.bind("XF86MonBrightnessDown", hl.dsp.exec_cmd("brightnessctl -e4 -n2 set 5%-"), { repeating = true, locked = true })
+hl.bind("XF86MonBrightnessUp", hl.dsp.exec_cmd("brightnessctl -n2 set 1%+"), { repeating = true, locked = true })
+hl.bind("XF86MonBrightnessDown", hl.dsp.exec_cmd("brightnessctl -n2 set 1%-"), { repeating = true, locked = true })
 
 -- Media (locked)
 hl.bind("XF86AudioNext", hl.dsp.exec_cmd("playerctl next"), { locked = true })

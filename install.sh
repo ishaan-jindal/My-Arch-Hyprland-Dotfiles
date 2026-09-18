@@ -5,19 +5,19 @@ set -e
 
 # --- CONFIGURATION ---
 # Keep this list in sync with:
-# - hypr/.config/hypr/hyprland.lua (binds: ghostty, wofi, zen-browser, wlogout,
-#   nemo, hyprshot, cliphist/wl-clipboard, brightnessctl, playerctl, nm-applet)
-# - hypr/.config/hypr/scripts/*.sh (awww, mpvpaper, hyprsunset, jq, notify-send, wofi, waybar, swaync)
+# - hypr/.config/hypr/hyprland.lua (binds: ghostty, quickshell/qs, zen-browser,
+#   nemo, hyprshot, cliphist/wl-clipboard, brightnessctl, playerctl)
+# - hypr/.config/hypr/scripts/*.sh (awww, mpvpaper, hyprsunset, jq, notify-send)
+# - quickshell/.config/quickshell (Pipewire audio, UPower battery, NetworkManager
+#   Wi-Fi panel, BlueZ Bluetooth panel, platform menu tray)
 pacman_packages=(
     "hyprland"
     "hyprlock"
     "hyprshot"
     "hyprsunset"
-    "waybar"
+    "quickshell"
+    "upower"
     "ghostty"
-    "wofi"
-    "wlogout"
-    "swaync"
     "nemo"
     "awww"
     "jq"
@@ -26,7 +26,6 @@ pacman_packages=(
     "cliphist"
     "brightnessctl"
     "playerctl"
-    "network-manager-applet"
     "neovim"
     "ripgrep"
     "fd"
@@ -65,9 +64,7 @@ aur_packages=(
 stow_packages=(
     "hypr"
     "nvim"
-    "waybar"
-    "wlogout"
-    "wofi"
+    "quickshell"
     "gtk"
     "xdg-portal"
     "fish"

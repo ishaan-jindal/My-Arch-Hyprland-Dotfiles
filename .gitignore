@@ -1,8 +1,2 @@
-# Theme-switcher generated symlinks (created by theme_toggle.sh).
-# Active theme outputs — sources live under hypr/.config/hypr/themes/.
-waybar/.config/waybar/config.jsonc
-waybar/.config/waybar/style.css
-wlogout/.config/wlogout/style.css
-wofi/.config/wofi/style.css
-# Current wallpaper pointer (created by theme/wallpaper/restore scripts).
+# Current wallpaper pointer (created by the theme/wallpaper/restore scripts).
 hypr/.config/hypr/themes/wallpapers/current

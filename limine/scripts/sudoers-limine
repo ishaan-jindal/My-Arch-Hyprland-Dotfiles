@@ -1,0 +1,4 @@
+# Limine theme sync (installed as /etc/sudoers.d/10-limine)
+# Empty-argument spec ("") restricts this to the no-argument sync invocation;
+# `--install` still requires a password.
+sacred ALL=(root) NOPASSWD: /usr/local/bin/limine-deploy ""

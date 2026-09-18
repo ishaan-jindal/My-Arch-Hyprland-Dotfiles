@@ -4,21 +4,28 @@
       "id": "arch",
       "path": "wallpapers/assets/arch.png",
       "tags": [
-        "ember"
+        "obsidian",
+        "dark",
+        "minimal"
       ]
     },
     {
       "id": "red",
       "path": "wallpapers/assets/red.jpg",
       "tags": [
-        "crimson"
+        "crimson",
+        "red",
+        "dark"
       ]
     },
     {
       "id": "windows",
       "path": "wallpapers/assets/windows.jpg",
       "tags": [
-        "windows"
+        "crimson",
+        "red",
+        "dark",
+        "minimal"
       ]
     },
     {
@@ -26,35 +33,51 @@
       "path": "wallpapers/assets/black.jpg",
       "tags": [
         "obsidian",
-        "aether"
+        "dark",
+        "crimson",
+        "red"
       ]
     },
     {
       "id": "atoms",
       "path": "wallpapers/assets/atoms.png",
       "tags": [
-        "ember"
+        "obsidian",
+        "dark",
+        "minimal",
+        "ember",
+        "gold"
       ]
     },
     {
       "id": "gold",
       "path": "wallpapers/assets/gold.png",
       "tags": [
-        "ember"
+        "ember",
+        "gold",
+        "warm",
+        "obsidian",
+        "dark"
       ]
     },
     {
       "id": "home",
       "path": "wallpapers/assets/home.jpg",
       "tags": [
-        "obsidian"
+        "obsidian",
+        "dark",
+        "minimal"
       ]
     },
     {
       "id": "sushi",
       "path": "wallpapers/assets/sushi.jpg",
       "tags": [
-        "ember"
+        "crimson",
+        "dark",
+        "red",
+        "ember",
+        "warm"
       ]
     },
     {
@@ -62,21 +85,27 @@
       "path": "wallpapers/assets/yin-and-yang.1920x1080.mp4",
       "tags": [
         "obsidian",
-        "drift"
+        "dark",
+        "minimal"
       ]
     },
     {
       "id": "sakura_pixel",
       "path": "wallpapers/assets/pixel-sakura.1920x1080.mp4",
       "tags": [
-        "drift"
+        "drift",
+        "calm",
+        "obsidian",
+        "dark"
       ]
     },
     {
       "id": "never_give_up",
       "path": "wallpapers/assets/never-give-up.1920x1080.mp4",
       "tags": [
-        "obsidian"
+        "obsidian",
+        "dark",
+        "minimal"
       ]
     },
     {
@@ -84,137 +113,158 @@
       "path": "wallpapers/assets/minimalistic-samurai.1920x1080.mp4",
       "tags": [
         "crimson",
-        "obsidian"
+        "red",
+        "dark",
+        "minimal"
       ]
     },
     {
       "id": "windows_gradient",
       "path": "wallpapers/assets/windows-11-logo-gradient.1920x1080.mp4",
       "tags": [
-        "windows"
+        "obsidian",
+        "dark",
+        "minimal"
       ]
     },
     {
       "id": "windows_minimal",
       "path": "wallpapers/assets/minimalist-windows-11.1920x1080.mp4",
       "tags": [
-        "windows",
-        "aether"
+        "obsidian",
+        "dark",
+        "minimal",
+        "aether",
+        "blue"
       ]
     },
     {
       "id": "hp_logo",
       "path": "wallpapers/assets/hp-logo.1920x1080.mp4",
       "tags": [
-        "aether"
+        "aether",
+        "light",
+        "clean",
+        "minimal"
       ]
     },
     {
       "id": "gradient_cube",
       "path": "wallpapers/assets/gradient-3d-cube.1920x1080.mp4",
       "tags": [
-        "aether",
-        "drift"
+        "obsidian",
+        "dark",
+        "minimal"
       ]
     },
     {
       "id": "graceful_defeat",
       "path": "wallpapers/assets/graceful-defeat.1920x1080.mp4",
       "tags": [
-        "crimson"
+        "crimson",
+        "dark",
+        "red",
+        "obsidian"
       ]
     },
     {
       "id": "happy_pixel",
       "path": "wallpapers/assets/colorful-pixel-quote.1920x1080.mp4",
       "tags": [
-        "drift"
+        "obsidian",
+        "dark",
+        "minimal"
       ]
     },
     {
       "id": "life_death",
       "path": "wallpapers/assets/life-and-death.1920x1080.mp4",
       "tags": [
-        "obsidian"
+        "obsidian",
+        "dark",
+        "minimal",
+        "aether",
+        "light"
       ]
     },
     {
       "id": "train_city",
       "path": "wallpapers/assets/aesthetic-landscape-with-train.3840x2160.mp4",
       "tags": [
+        "aether",
+        "light",
+        "clean",
+        "blue",
         "drift",
-        "aether"
+        "calm"
       ]
     },
     {
       "id": "red-water-sunset",
       "path": "wallpapers/assets/red-water-sunset.jpg",
       "tags": [
-        "red",
-        "warm",
+        "aether",
         "light",
-        "calm",
-        "clean"
+        "clean",
+        "crimson",
+        "red",
+        "calm"
       ]
     },
     {
       "id": "green-volcano",
       "path": "wallpapers/assets/green-volcano.jpg",
       "tags": [
+        "obsidian",
         "dark",
-        "clean",
+        "drift",
+        "calm"
+      ]
+    },
+    {
+      "id": "train_lake",
+      "path": "wallpapers/assets/train-and-lake.png",
+      "tags": [
+        "aether",
+        "blue",
+        "drift",
+        "calm"
+      ]
+    },
+    {
+      "id": "black_car_girl",
+      "path": "wallpapers/assets/black-car-girl.jpg",
+      "tags": [
+        "obsidian",
+        "dark",
+        "minimal"
+      ]
+    },
+    {
+      "id": "chill",
+      "path": "wallpapers/assets/chill.960x486.mp4",
+      "tags": [
+        "ember",
+        "warm",
+        "drift",
         "calm"
       ]
     }
   ],
   "components": {
-    "waybar": {
-      "obsidian": "waybar/obsidian",
-      "crimson": "waybar/crimson",
-      "aether": "waybar/aether",
-      "ember": "waybar/ember",
-      "drift": "waybar/drift",
-      "windows": "waybar/windows"
-    },
-    "wofi": {
-      "obsidian": "wofi/obsidian/style.css",
-      "crimson": "wofi/crimson/style.css",
-      "aether": "wofi/aether/style.css",
-      "ember": "wofi/ember/style.css",
-      "drift": "wofi/drift/style.css",
-      "windows": "wofi/windows/style.css"
-    },
-    "wlogout": {
-      "obsidian": "wlogout/obsidian/style.css",
-      "crimson": "wlogout/crimson/style.css",
-      "aether": "wlogout/aether/style.css",
-      "ember": "wlogout/ember/style.css",
-      "drift": "wlogout/drift/style.css",
-      "windows": "wlogout/windows/style.css"
-    },
     "gtk": {
       "obsidian": "Orchis-Dark",
       "crimson": "Orchis-Dark",
       "aether": "adw-gtk3-dark",
       "ember": "Dracula",
-      "drift": "adw-gtk3-dark",
-      "windows": "adw-gtk3-dark"
-    },
-    "swaync": {
-      "obsidian": "swaync/obsidian",
-      "crimson": "swaync/crimson",
-      "aether": "swaync/aether",
-      "ember": "swaync/ember",
-      "drift": "swaync/drift",
-      "windows": "swaync/windows"
+      "drift": "adw-gtk3-dark"
     },
     "icon": {
       "obsidian": "Papirus-Dark",
       "crimson": "Papirus-Dark",
       "aether": "Papirus-Dark",
       "ember": "Papirus-Dark",
-      "drift": "Papirus-Dark",
-      "windows": "Papirus-Dark"
+      "drift": "Papirus-Dark"
     }
   },
   "defaults": {
@@ -231,11 +281,7 @@
         "minimal"
       ],
       "components": {
-        "waybar": "obsidian",
-        "wofi": "obsidian",
-        "wlogout": "obsidian",
         "gtk": "obsidian",
-        "swaync": "obsidian",
         "icon": "obsidian"
       }
     },
@@ -246,11 +292,7 @@
         "dark"
       ],
       "components": {
-        "waybar": "crimson",
-        "wofi": "crimson",
-        "wlogout": "crimson",
         "gtk": "crimson",
-        "swaync": "crimson",
         "icon": "crimson"
       }
     },
@@ -262,11 +304,7 @@
         "clean"
       ],
       "components": {
-        "waybar": "aether",
-        "wofi": "aether",
-        "wlogout": "aether",
         "gtk": "aether",
-        "swaync": "aether",
         "icon": "aether"
       }
     },
@@ -277,11 +315,7 @@
         "gold"
       ],
       "components": {
-        "waybar": "ember",
-        "wofi": "ember",
-        "wlogout": "ember",
         "gtk": "ember",
-        "swaync": "ember",
         "icon": "ember"
       }
     },
@@ -292,27 +326,8 @@
         "ambient"
       ],
       "components": {
-        "waybar": "drift",
-        "wofi": "drift",
-        "wlogout": "drift",
         "gtk": "drift",
-        "swaync": "drift",
         "icon": "drift"
-      }
-    },
-    "windows": {
-      "tags": [
-        "windows",
-        "clean",
-        "modern"
-      ],
-      "components": {
-        "waybar": "windows",
-        "wofi": "windows",
-        "wlogout": "windows",
-        "gtk": "windows",
-        "swaync": "windows",
-        "icon": "windows"
       }
     }
   }

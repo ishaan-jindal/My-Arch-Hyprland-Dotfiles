@@ -18,35 +18,35 @@ bash install.sh
 Or install manually (example subset):
 
 ```bash
-sudo pacman -S hyprland hyprlock hyprshot hyprsunset waybar ghostty wofi wlogout swaync \
+sudo pacman -S hyprland hyprlock hyprshot hyprsunset quickshell upower ghostty \
   awww jq libnotify wl-clipboard cliphist brightnessctl playerctl \
-  network-manager-applet stow neovim ripgrep fd
+  stow neovim ripgrep fd
 yay -S mpvpaper
 # Optional browser bound to Super+B:
 # yay -S zen-browser-bin
 ```
+
+`quickshell` is the desktop shell (bar, launcher, session menu, notifications,
+control centre, OSDs). Waybar/Wofi/Wlogout/Swaync are **not** needed.
 
 ## 3) Back up existing configs (recommended)
 
 ```bash
 mkdir -p ~/.config-backup
 mv ~/.config/hypr ~/.config-backup/hypr 2>/dev/null || true
-mv ~/.config/waybar ~/.config-backup/waybar 2>/dev/null || true
-mv ~/.config/wofi ~/.config-backup/wofi 2>/dev/null || true
-mv ~/.config/wlogout ~/.config-backup/wlogout 2>/dev/null || true
+mv ~/.config/quickshell ~/.config-backup/quickshell 2>/dev/null || true
 mv ~/.config/nvim ~/.config-backup/nvim 2>/dev/null || true
 mv ~/.config/gtk-3.0 ~/.config-backup/gtk-3.0 2>/dev/null || true
 mv ~/.config/gtk-4.0 ~/.config-backup/gtk-4.0 2>/dev/null || true
 mv ~/.config/fish ~/.config-backup/fish 2>/dev/null || true
 mv ~/.config/ghostty ~/.config-backup/ghostty 2>/dev/null || true
-mv ~/.config/swaync ~/.config-backup/swaync 2>/dev/null || true
 mv ~/.config/xdg-desktop-portal ~/.config-backup/xdg-desktop-portal 2>/dev/null || true
 ```
 
 ## 4) Stow dotfiles
 
 ```bash
-stow hypr nvim waybar wlogout wofi gtk xdg-portal fish ghostty
+stow hypr nvim quickshell gtk xdg-portal fish ghostty
 ```
 
 This creates symlinks into `~/.config`. Never use `stow *` — it would try to
@@ -56,10 +56,20 @@ stow `docs/` and other non-config dirs.
 
 At minimum, verify:
 
-- `waybar` autostarts
-- `nm-applet` appears
-- `Super + Shift + T` opens the theme menu
-- `Super + T` opens the wallpaper menu
+- the Quickshell bar appears at the top (workspaces, clock, status modules)
+- `Super + C` shows the control centre, with working Wi-Fi and Bluetooth panels
+  (no `nm-applet`/`blueman` tray applets needed)
+- `Super + R` opens the app launcher
+- `Super + K` shows the keybind cheatsheet
+- `Super + Shift + T` opens the theme picker and re-themes the bar live
+- `Super + T` opens the wallpaper picker for the current theme
+
+Shell not starting? Run `quickshell` in a terminal and watch for QML errors,
+then check `qs ipc call shell diagnostics`.
+
+See [QUICKSHELL.md](QUICKSHELL.md) for the full shell reference,
+[THEMES.md](THEMES.md) for the theme pipeline and [KEYBINDS.md](KEYBINDS.md)
+for every bind.
 
 ## 6) Optional: Neovim plugins
 
@@ -75,12 +85,27 @@ falls back to LSP.
 
 ## Troubleshooting
 
-### Theme switcher fails
+### Quickshell fails to start
+
+```bash
+pgrep -x quickshell || quickshell   # run in the foreground to see errors
+qs ipc call shell diagnostics       # JSON state dump
+```
 
 Check that the stow symlinks exist:
 
 ```bash
-ls -l ~/.config/waybar ~/.config/wofi ~/.config/wlogout ~/.config/hypr
+ls -l ~/.config/quickshell/shell.qml ~/.config/hypr/themes/themes.json
+```
+
+### Theme doesn't change
+
+Make sure `themes.json` parses and the state file is writable:
+
+```bash
+jq . ~/.config/hypr/themes/themes.json >/dev/null && echo themes.json OK
+cat ~/.cache/theme_state
+~/.config/hypr/scripts/theme_toggle.sh apply obsidian
 ```
 
 ### Wallpaper not changing
@@ -92,9 +117,12 @@ pgrep -x awww-daemon || awww-daemon
 pgrep -x mpvpaper || true  # mpvpaper is started on-demand by the theme scripts
 ```
 
-### Clipboard history binding fails
+### Clipboard history empty/broken
 
 Install both:
 
 - `wl-clipboard` (provides `wl-paste` / `wl-copy`)
 - `cliphist`
+
+The watchers are started by `hyprland.lua` on login; the launcher clipboard
+page is `Super + V`.

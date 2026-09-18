@@ -1,0 +1,5 @@
+singleton Theme 1.0 Theme.qml
+singleton Icons 1.0 Icons.qml
+singleton Sys 1.0 Sys.qml
+singleton ShellState 1.0 ShellState.qml
+singleton Notify 1.0 Notify.qml

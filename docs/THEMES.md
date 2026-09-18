@@ -2,78 +2,99 @@
 
 The desktop theme system is handled by:
 
-- `hypr/.config/hypr/scripts/theme_toggle.sh`
-- `hypr/.config/hypr/scripts/wallpaper_switch.sh`
 - `hypr/.config/hypr/themes/themes.json` (single source of truth)
+- `hypr/.config/hypr/scripts/theme_toggle.sh apply <theme>`
+- `hypr/.config/hypr/scripts/wallpaper_switch.sh apply <wallpaper-id>`
+
+The Quickshell shell renders the themes itself: `Theme.qml` reads
+`themes.json` plus `~/.cache/theme_state` and re-colors the bar, launcher,
+control centre, session menu, notifications and OSDs live.
 
 ## Available themes
 
-- obsidian (minimal monochrome) -> GTK `Orchis-Dark`
-- crimson (sharp red) -> GTK `Orchis-Dark` + red swaync accent
-- aether (clean blue) -> GTK `adw-gtk3-dark`
-- ember (warm gruvbox) -> GTK `Dracula`
-- drift (ambient pastel) -> GTK `adw-gtk3-dark`
-- windows (fluent) -> GTK `adw-gtk3-dark`
+| Theme | Look | GTK theme | Accent |
+| ----- | ---- | --------- | ------ |
+| obsidian | minimal monochrome | `Orchis-Dark` | white |
+| crimson | sharp red | `Orchis-Dark` | `#ff2a3d` |
+| aether | clean blue / glassy | `adw-gtk3-dark` | `#7aa2f7` |
+| ember | warm gruvbox | `Dracula` | `#e0af68` |
+| drift | ambient pastel | `adw-gtk3-dark` | `#7aa2a9` / `#c792ea` |
 
-All themes use `Papirus-Dark` icons, `Bibata-Modern-Classic` cursor, `prefer-dark` color-scheme.
-`Orchis-*-Red/Blue` variants are not in the current `extra/orchis-theme` build, so red/blue
-accents live in swaync/waybar/wofi CSS until the AUR `gruvbox/catppuccin` themes are added.
+All themes use `Papirus-Dark` icons, `Bibata-Modern-Classic` cursor,
+`prefer-dark` color scheme and the JetBrainsMono Nerd Font.
+
+The palettes live in `quickshell/.config/quickshell/Theme.qml`
+(`palettes` object) — they were ported 1:1 from the old per-theme Waybar
+stylesheets, which have since been removed.
 
 ## How theme switching works
 
-When you run **theme toggle** (`Super + Shift + T`):
+`Super + Shift + T` opens the Quickshell launcher on the **Themes** page.
+Selecting a theme runs `theme_toggle.sh apply <theme>`, which:
 
-1. A `wofi` menu is shown.
-2. Selected theme resources are mapped:
-   - Waybar config and style
-   - Wofi style
-   - Wlogout style
-   - Wallpaper directory
-   - GTK theme (`gtk-3.0/settings.ini` + `gtk-4.0/settings.ini` + `gsettings`)
-   - Swaync config and style (`~/.config/swaync/`)
-3. Symlinks are updated:
-   - `~/.config/waybar/config.jsonc`
-   - `~/.config/waybar/style.css`
-   - `~/.config/wofi/style.css`
-   - `~/.config/wlogout/style.css`
-   - `~/.config/hypr/themes/wallpapers/current`
-   - `~/.config/swaync/config.json`
-   - `~/.config/swaync/style.css`
-4. `waybar` is restarted, `swaync` is reloaded (or started, `dunst` killed).
-5. GTK file picker picks up the theme via `xdg-desktop-portal-gtk` + `portals.conf`
-   (`FileChooser=gtk`) on next open — no reboot needed.
-6. Theme and wallpaper state are saved in `~/.cache`.
+1. Applies the theme's wallpaper (last used for that theme, else the first
+   wallpaper tagged for it) via `awww` (images) or `mpvpaper` (videos).
+2. Updates `~/.config/hypr/themes/wallpapers/current`.
+3. Syncs GTK: `gtk-3.0/settings.ini`, `gtk-4.0/settings.ini` and
+   `gsettings` (theme, icons, cursor, font, color-scheme).
+4. Writes `~/.cache/theme_state` and `~/.cache/wallpaper_state_<theme>`.
+5. Syncs the Limine boot menu (best effort, needs the sudoers rule).
+
+The Quickshell shell watches `~/.cache/theme_state`, so the bar and every
+popup re-theme live — no restart, no manual reload. Color changes
+**cross-fade** (320 ms, `Theme.qml` palette blending), and the wallpaper is
+applied with the same `awww -t wipe` transition as the wallpaper picker
+(both scripts share `hypr/scripts/lib/wallpaper.sh`). The GTK file
+picker picks the theme up via `xdg-desktop-portal-gtk` + `portals.conf`
+(`FileChooser=gtk`) on next open.
 
 ## State files
 
-The scripts track state in:
-
-- `~/.cache/theme_state`
-- `~/.cache/wallpaper_state_<theme>` (one per theme, e.g. `wallpaper_state_obsidian`)
-
-This preserves your last selected wallpaper per theme.
+- `~/.cache/theme_state` — active theme name (read by Quickshell)
+- `~/.cache/wallpaper_state_<theme>` — last wallpaper per theme
 
 ## Wallpaper switching
 
-`Super + T` opens wallpaper selection for the **current** theme only.
+`Super + T` opens the Quickshell launcher on the **Wallpapers** page, listing
+wallpapers for the **current** theme only.
 
-- Wallpapers are matched by tag in `themes.json` (`wallpapers[].tags` vs `themes.<name>.tags`)
-- Accepted formats: `.jpg`, `.jpeg`, `.png` (images via `awww`), `.mp4` (video via `mpvpaper`)
+- Matching: `wallpapers[].tags` intersects `themes.<name>.tags` in `themes.json`
+- Formats: `.jpg`, `.jpeg`, `.png` (via `awww`), `.mp4` (via `mpvpaper`)
+- Selection runs `wallpaper_switch.sh apply <id>` and updates the state files
+
+Both scripts are CLI-only now (`apply <arg>`); the pickers live in
+Quickshell. Running them without arguments prints usage.
 
 ## Adding a new theme
 
-To add theme `mytheme`, create:
+1. Add the palette to `Theme.qml` (`palettes` object) — copy an existing
+   entry and adjust `bg`/`border`/`fg`/`muted`/`hover`/`accent`/
+   `accentSoft`/`critical`, `radius`, `fontFamily`, `fontSize`.
+   Colors are `#AARRGGBB` strings (alpha first).
+2. Add wallpapers under `hypr/.config/hypr/themes/wallpapers/assets/` with
+   `tags` containing the new theme name. Tag by content and mood against the
+   theme tag pools (`obsidian/dark/minimal`, `crimson/red/dark`,
+   `aether/light/blue/clean`, `ember/warm/gold`, `drift/calm/ambient`) —
+   a wallpaper matches every theme sharing at least one tag.
+   For `.mp4` wallpapers also generate the picker thumbnail (middle frame,
+   512px wide) so videos preview instead of showing a play placeholder:
 
-- `hypr/.config/hypr/themes/waybar/mytheme/style.css` (+ `config.jsonc`, or symlink
-  `../base/config.jsonc` if the shared top-bar layout works for the theme)
-- `hypr/.config/hypr/themes/wofi/mytheme/style.css`
-- `hypr/.config/hypr/themes/wlogout/mytheme/style.css`
-- `hypr/.config/hypr/themes/swaync/mytheme/style.css` (+ `config.json`, or symlink
-  `../base/config.json` — all current themes share the same base config)
-- Add wallpapers under `hypr/.config/hypr/themes/wallpapers/assets/` with `tags`
-  including `mytheme` (or a descriptor your theme's `tags` include)
+   ```bash
+   dur=$(ffprobe -v error -show_entries format=duration \
+     -of default=noprint_wrappers=1:nokey=1 file.mp4)
+   ffmpeg -y -ss $(python3 -c "print($dur/2)") -i file.mp4 -frames:v 1 \
+     -vf scale=512:-1 -q:v 3 \
+     hypr/.config/hypr/themes/wallpapers/thumbs/<id>.jpg
+   ```
+3. Add the theme to `hypr/.config/hypr/themes/themes.json`:
 
-Then update `hypr/.config/hypr/themes/themes.json`:
+```json
+"mytheme": {
+  "tags": ["mytheme", "dark"],
+  "components": { "gtk": "mytheme", "icon": "mytheme" }
+}
+```
 
-- Add `components.gtk/mytheme`, `components.swaync/mytheme`, `components.icon/mytheme`
-- Add `themes.mytheme.components` with `waybar/wofi/wlogout/gtk/swaync/icon` keys
+plus `components.gtk.mytheme` / `components.icon.mytheme` entries.
+
+No symlinks, no per-app stylesheets: the palette is the theme.

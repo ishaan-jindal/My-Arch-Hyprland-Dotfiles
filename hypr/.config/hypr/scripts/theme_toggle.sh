@@ -1,5 +1,21 @@
 #!/bin/bash
+# Desktop theme switcher.
+#
+# Usage: theme_toggle.sh apply <theme>
+#
+# Applies, for the given theme from `hypr/themes/themes.json`:
+#   - wallpaper (awww for images, mpvpaper for videos) + `wallpapers/current` symlink
+#   - GTK theme / icon theme / cursor / font (gtk-3.0 + gtk-4.0 + gsettings)
+#   - state files (~/.cache/theme_state, ~/.cache/wallpaper_state_<theme>)
+#   - best-effort Limine boot menu sync (needs the sudoers rule)
+#
+# The Quickshell shell watches ~/.cache/theme_state and re-themes itself live;
+# its launcher themes page drives this script (Super + Shift + T).
 set -u
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=lib/wallpaper.sh
+. "$SCRIPT_DIR/lib/wallpaper.sh"
 
 CONFIG="$HOME/.config/hypr/themes/themes.json"
 BASE="$HOME/.config/hypr/themes"
@@ -7,14 +23,7 @@ BASE="$HOME/.config/hypr/themes"
 THEME_STATE="$HOME/.cache/theme_state"
 WALL_STATE_PREFIX="$HOME/.cache/wallpaper_state_"
 
-# symlinks
-waybar_config="$HOME/.config/waybar/config.jsonc"
-waybar_style="$HOME/.config/waybar/style.css"
-wofi_style="$HOME/.config/wofi/style.css"
-wlogout_style="$HOME/.config/wlogout/style.css"
 current_wall="$BASE/wallpapers/current"
-swaync_config="$HOME/.config/swaync/config.json"
-swaync_style="$HOME/.config/swaync/style.css"
 gtk3_ini="$HOME/.config/gtk-3.0/settings.ini"
 gtk4_ini="$HOME/.config/gtk-4.0/settings.ini"
 
@@ -24,6 +33,11 @@ notify_err() {
     else
         echo "ERROR: $1: $2" >&2
     fi
+}
+
+usage() {
+    echo "usage: $(basename "$0") apply <theme>" >&2
+    echo "themes: $(jq -r '.themes | keys | join(", ")' "$CONFIG" 2>/dev/null)" >&2
 }
 
 # ----------------------
@@ -80,47 +94,7 @@ EOF
 }
 
 # ----------------------
-# swaync sync (replaces dunst)
-# ----------------------
-apply_swaync() {
-    local src_dir="$1"
-    [ -z "$src_dir" ] || [ "$src_dir" = "null" ] && return 0
-    [ -d "$src_dir" ] || { echo "Swaync theme missing: $src_dir"; return 0; }
-
-    mkdir -p "$(dirname "$swaync_config")"
-    rm -f "$swaync_config" "$swaync_style"
-    [ -f "$src_dir/config.json" ] && ln -s "$src_dir/config.json" "$swaync_config"
-    [ -f "$src_dir/style.css" ] && ln -s "$src_dir/style.css" "$swaync_style"
-
-    if pgrep -x swaync >/dev/null 2>&1; then
-        swaync-client --reload-config >/dev/null 2>&1 || { pkill -x swaync; swaync >/dev/null 2>&1 & }
-    else
-        pkill -x dunst >/dev/null 2>&1 || true
-        swaync >/dev/null 2>&1 &
-    fi
-}
-
-# ----------------------
-# wallpaper setter
-# ----------------------
-set_wallpaper() {
-    local file="$1"
-
-    pkill mpvpaper >/dev/null 2>&1 || true
-
-    if [[ "$file" == *.mp4 ]]; then
-        pkill awww-daemon >/dev/null 2>&1 || true
-        mpvpaper -o "loop --no-audio --hwdec=auto --vo=gpu --profile=fast" "*" "$file" &
-    else
-        if ! pgrep -x "awww-daemon" >/dev/null; then
-            awww-daemon & sleep 0.3
-        fi
-        awww img "$file" --transition-type none
-    fi
-}
-
-# ----------------------
-# pick wallpaper
+# pick wallpaper for a theme
 # ----------------------
 get_wallpaper() {
     local theme="$1"
@@ -160,78 +134,55 @@ apply_theme() {
     wall=$(get_wallpaper "$theme")
 
     if [ -z "$wall" ]; then
-      notify_err "Theme Error" "No wallpaper found for theme: $theme"
-      return 1
+        notify_err "Theme Error" "No wallpaper found for theme: $theme"
+        return 1
     fi
 
-    set_wallpaper "$wall"
+    set_wallpaper_file "$wall"
 
-    # Single jq pass: waybar_key, wofi_key, wlogout_key, gtk_key, swaync_key,
-    # icon_key, waybar_path, wofi_path, wlogout_path, gtk_theme, icon_theme, swaync_dir
+    # Resolve the GTK theme + icon theme for this theme
     local resolved
     resolved=$(jq -r --arg theme "$theme" '
     . as $root |
     $root.themes[$theme].components as $c |
+    [ ($c.gtk // $theme), ($c.icon // $theme) ] as [$gk, $ic] |
     [
-      $c.waybar,
-      $c.wofi,
-      $c.wlogout,
-      ($c.gtk // $theme),
-      ($c.swaync // $theme),
-      ($c.icon // $theme)
-    ] as [$wb, $wf, $wl, $gk, $sn, $ic] |
-    [
-      $wb, $wf, $wl, $gk, $sn, $ic,
-      $root.components.waybar[$wb],
-      $root.components.wofi[$wf],
-      $root.components.wlogout[$wl],
       ($root.components.gtk[$gk] // $gk),
-      ($root.components.icon[$ic] // $ic),
-      $root.components.swaync[$sn]
+      ($root.components.icon[$ic] // $ic)
     ] | join("\u001f")
     ' "$CONFIG")
 
-    IFS=$'\037' read -r waybar_key wofi_key wlogout_key gtk_key swaync_key icon_key \
-        waybar_rel wofi_rel wlogout_rel gtk_theme icon_theme swaync_rel <<< "$resolved"
+    local gtk_theme icon_theme
+    IFS=$'\037' read -r gtk_theme icon_theme <<< "$resolved"
 
-    local waybar_path="$BASE/$waybar_rel"
-    local wofi_path="$BASE/$wofi_rel"
-    local wlogout_path="$BASE/$wlogout_rel"
-    local swaync_dir="$BASE/$swaync_rel"
-
-    mkdir -p "$(dirname "$waybar_config")" "$(dirname "$wofi_style")" \
-        "$(dirname "$wlogout_style")" "$(dirname "$current_wall")" \
-        "$(dirname "$swaync_config")"
-    rm -f "$waybar_config" "$waybar_style" "$wofi_style" "$wlogout_style" "$current_wall"
-
-    [ ! -f "$waybar_path/config.jsonc" ] && echo "Waybar config missing: $waybar_path"
-    [ ! -f "$wofi_path" ] && echo "Wofi missing: $wofi_path"
-    [ ! -f "$wlogout_path" ] && echo "Wlogout missing: $wlogout_path"
-
-    ln -s "$waybar_path/config.jsonc" "$waybar_config"
-    ln -s "$waybar_path/style.css" "$waybar_style"
-    ln -s "$wofi_path" "$wofi_style"
-    ln -s "$wlogout_path" "$wlogout_style"
+    mkdir -p "$(dirname "$current_wall")"
+    rm -f "$current_wall"
     ln -s "$wall" "$current_wall"
 
-    pkill -x waybar >/dev/null 2>&1 || true
-    waybar >/dev/null 2>&1 & disown || true
-
     apply_gtk "$gtk_theme" "$icon_theme"
-    apply_swaync "$swaync_dir"
 
     echo "$theme" > "$THEME_STATE"
     echo "$wall" > "${WALL_STATE_PREFIX}${theme}"
+
+    # keep the Limine boot menu in sync (best effort; needs the sudoers rule)
+    "$HOME/dotfiles/limine/scripts/limine-sync" >/dev/null 2>&1 || true
 }
 
 # ----------------------
-# menu
+# CLI entry (used by the Quickshell launcher / Super + Shift + T)
+#   theme_toggle.sh apply <theme>
 # ----------------------
-themes=$(jq -r '.themes | keys[]' "$CONFIG")
-
-selected=$(echo "$themes" | wofi --dmenu -p "Theme")
-
-[ -z "$selected" ] && exit 0
-
-apply_theme "$selected"
-
+command="${1:-}"
+case "$command" in
+    apply)
+        if [ -z "${2:-}" ]; then
+            usage
+            exit 1
+        fi
+        apply_theme "$2"
+        ;;
+    *)
+        usage
+        exit 1
+        ;;
+esac
