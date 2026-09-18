@@ -15,6 +15,15 @@ CURRENT_LINK="$HOME/.config/hypr/themes/wallpapers/current"
 WALL_STATE="$HOME/.cache/wallpaper_state"
 AUTOTHEME_JSON="$HOME/.cache/autotheme.json"
 AUTOTHEME_TEMPLATE="$HOME/.config/hypr/scripts/templates/autotheme.json"
+GHOSTTY_TEMPLATE="$HOME/.config/hypr/scripts/templates/ghostty-theme"
+GHOSTTY_THEME="$HOME/.config/ghostty/themes/autotheme"
+HYPLOCK_TEMPLATE="$HOME/.config/hypr/hyprlock.conf.template"
+HYPLOCK_CONF="$HOME/.config/hypr/hyprlock.conf"
+GTK3_TEMPLATE="$HOME/.config/hypr/scripts/templates/gtk3.css"
+GTK3_CSS="$HOME/.config/gtk-3.0/gtk.css"
+GTK4_TEMPLATE="$HOME/.config/hypr/scripts/templates/gtk4.css"
+GTK4_CSS="$HOME/.config/gtk-4.0/gtk.css"
+VIBRANT_PY="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/vibrant.py"
 
 # Fixed dark desktop furniture (the generated palette only themes the shell).
 GTK_THEME="Orchis-Dark"
@@ -96,26 +105,6 @@ ensure_thumb() {
 }
 
 # ----------------------
-# mean_saturation <image> -> 0..1 (1 when unmeasurable, i.e. assume color)
-# ----------------------
-mean_saturation() {
-    magick "$1" -resize 64x64 -colorspace HSL -channel S -separate +channel \
-        -format "%[fx:mean]" info: 2>/dev/null || echo 1
-}
-
-# ----------------------
-# is_monochrome <image>
-# True grayscale has no hue for matugen to work with — it falls back to a
-# hardcoded blue (#4285f4), painting grey wallpapers blue. Catch that case
-# here so they get a neutral theme instead.
-# ----------------------
-is_monochrome() {
-    local s
-    s="$(mean_saturation "$1")"
-    python3 -c "import sys; sys.exit(0 if float('$s') < 0.012 else 1)" 2>/dev/null
-}
-
-# ----------------------
 # autotheme_valid — the shell reads this file live, never write garbage
 # ----------------------
 autotheme_valid() {
@@ -125,6 +114,118 @@ autotheme_valid() {
          .hover, .accent, .accentSoft, .critical]
         | all(test("^#([0-9a-fA-F]{6}|[0-9a-fA-F]{8})$"))
     ' "$AUTOTHEME_JSON" >/dev/null 2>&1
+}
+
+# ----------------------
+# strip6 <#RRGGBB|#AARRGGBB> -> RRGGBB
+# ----------------------
+strip6() {
+    local h="${1#\#}"
+    if [ "${#h}" -eq 8 ]; then
+        h="${h:2}"
+    fi
+    if [[ "$h" =~ ^[0-9a-fA-F]{6}$ ]]; then
+        printf '%s' "$h"
+        return 0
+    fi
+    return 1
+}
+
+# ----------------------
+# set_hypr_borders — window borders follow the generated accent, live.
+# The Lua config rejects `hyprctl keyword`, so this goes through
+# `hyprctl eval`. No-op when Hyprland isn't running or theme is invalid.
+# ----------------------
+set_hypr_borders() {
+    command -v hyprctl >/dev/null 2>&1 || return 0
+    autotheme_valid || return 0
+    local acc inact
+    acc="$(jq -r '.accent' "$AUTOTHEME_JSON")"
+    inact="$(jq -r '.border' "$AUTOTHEME_JSON")"
+    acc="$(strip6 "$acc")" || return 0
+    inact="$(strip6 "$inact")" || inact="3a3f4b"
+    hyprctl eval "hl.config({ general = { [\"col.active_border\"] = \"rgba(${acc}ee)\", [\"col.inactive_border\"] = \"rgba(${inact}aa)\" } })" >/dev/null 2>&1 || true
+}
+
+# ----------------------
+# render_template_fallback <template> <output>
+# Same matugen tokens, neutral values — single skeleton, no duplication.
+# Fails if any token is left unsubstituted.
+# ----------------------
+render_template_fallback() {
+    sed -e 's|{{ colors.primary.dark.hex }}|#ffffff|g' \
+        -e 's|{{ colors.on_primary.dark.hex }}|#0a0a0c|g' \
+        -e 's|{{ colors.secondary.dark.hex }}|#8b8f98|g' \
+        -e 's|{{ colors.primary.dark.red }}|255|g' \
+        -e 's|{{ colors.primary.dark.green }}|255|g' \
+        -e 's|{{ colors.primary.dark.blue }}|255|g' \
+        -e 's|{{ colors.tertiary.dark.red }}|139|g' \
+        -e 's|{{ colors.tertiary.dark.green }}|143|g' \
+        -e 's|{{ colors.tertiary.dark.blue }}|152|g' \
+        -e 's|{{ vibrant.hex }}|#ffffff|g' \
+        -e 's|{{ vibrant_soft.hex }}|#8b8f98|g' \
+        -e 's|{{ vibrant_on.hex }}|#0a0a0c|g' \
+        -e 's|{{ vibrant.red }}|255|g' \
+        -e 's|{{ vibrant.green }}|255|g' \
+        -e 's|{{ vibrant.blue }}|255|g' \
+        -e 's|{{ vibrant_soft.red }}|139|g' \
+        -e 's|{{ vibrant_soft.green }}|143|g' \
+        -e 's|{{ vibrant_soft.blue }}|152|g' \
+        "$1" > "$2" || return 1
+    ! grep -q '{{' "$2" 2>/dev/null
+}
+
+# ----------------------
+# write_all_fallbacks — neutral versions of every generated file
+# ----------------------
+write_all_fallbacks() {
+    local wall="$1"
+    write_fallback_autotheme "$wall"
+    write_ghostty_theme_neutral
+    render_template_fallback "$HYPLOCK_TEMPLATE" "$HYPLOCK_CONF" || true
+    render_template_fallback "$GTK3_TEMPLATE" "$GTK3_CSS" || true
+    render_template_fallback "$GTK4_TEMPLATE" "$GTK4_CSS" || true
+    reload_ghostty
+}
+
+# ----------------------
+# reload_ghostty — ghostty reloads its config (and theme file) on SIGUSR2
+# ----------------------
+reload_ghostty() {
+    pkill -SIGUSR2 ghostty 2>/dev/null || true
+}
+
+# ----------------------
+# write_ghostty_theme_neutral — static terminal theme matching the
+# neutral fallback palette (grayscale wallpapers, matugen missing/failed)
+# ----------------------
+write_ghostty_theme_neutral() {
+    mkdir -p "$(dirname "$GHOSTTY_THEME")"
+    cat > "$GHOSTTY_THEME" <<EOF
+# Generated by wallpaper_switch.sh (neutral fallback) — do not edit.
+background = #0a0a0c
+foreground = #e6e6e6
+cursor-color = #ffffff
+cursor-text = #0a0a0c
+selection-background = #3a3f4b
+selection-foreground = #ffffff
+palette = 0=#0a0a0c
+palette = 1=#ff5f5f
+palette = 2=#8b8f98
+palette = 3=#b8bcc4
+palette = 4=#ffffff
+palette = 5=#6e737d
+palette = 6=#a7adb8
+palette = 7=#e6e6e6
+palette = 8=#3a3f4b
+palette = 9=#ff8a8a
+palette = 10=#a7adb8
+palette = 11=#d4d8df
+palette = 12=#ffffff
+palette = 13=#8b8f98
+palette = 14=#c2c7d1
+palette = 15=#ffffff
+EOF
 }
 
 # ----------------------
@@ -158,15 +259,18 @@ EOF
 
 # ----------------------
 # generate_autotheme <wallpaper-path>
-# Runs matugen once (dark-only) through an isolated temp config so the
-# user's own ~/.config/matugen/config.toml (if any) can never set the
-# wallpaper or inject templates. Grayscale images skip matugen (it would
-# fall back to hardcoded blue) and get the neutral theme; matugen
-# missing/failing falls back to the static palette.
-# One-shot cost (~200-400ms), zero idle cost.
+# Two-stage, one-shot (~300-500ms), zero idle cost:
+#   1. vibrant.py extracts the wallpaper's own most-vivid hues (M3 dark
+#      roles are pastel by spec and wash saturated images out).
+#   2. matugen renders every generated file through an isolated temp
+#      config (user config never touched, wallpaper never set by matugen),
+#      with the vibrant hues injected via --import-json.
+# Grayscale images (extractor exit 2) and matugen missing/failing fall
+# back to the neutral static theme. Window borders apply live via
+# hyprctl on every path.
 # ----------------------
 generate_autotheme() {
-    local wall="$1" src="$1" frame=""
+    local wall="$1" src="$1" frame="" vib="" vib_rc=0
 
     if is_video "$wall"; then
         frame="$(mktemp --suffix=.png)"
@@ -184,12 +288,21 @@ generate_autotheme() {
         fi
     fi
 
-    # Grayscale has no hue: matugen would fall back to hardcoded blue, so
-    # use the neutral theme directly (not an error, no notification).
-    if is_monochrome "$src"; then
+    # Stage 1: vivid hues from the image itself. Exit 2 means grayscale
+    # (neutral theme, silent); any other failure is a real error.
+    vib="$(mktemp --suffix=.json)"
+    python3 "$VIBRANT_PY" "$src" "$vib" 2>/dev/null
+    vib_rc=$?
+    if [ "$vib_rc" -ne 0 ]; then
+        rm -f "$vib"
         [ -n "$frame" ] && rm -f "$frame"
-        write_fallback_autotheme "$wall"
-        return 0
+        write_all_fallbacks "$wall"
+        set_hypr_borders
+        if [ "$vib_rc" -eq 2 ]; then
+            return 0
+        fi
+        notify_err "Autotheme" "Accent extraction failed, using fallback palette"
+        return 1
     fi
 
     local ok=1
@@ -207,10 +320,27 @@ command = "true"
 [templates.autotheme]
 input_path = "$AUTOTHEME_TEMPLATE"
 output_path = "$AUTOTHEME_JSON"
+[templates.ghostty]
+input_path = "$GHOSTTY_TEMPLATE"
+output_path = "$GHOSTTY_THEME"
+post_hook = "pkill -SIGUSR2 ghostty"
+[templates.hyprlock]
+input_path = "$HYPLOCK_TEMPLATE"
+output_path = "$HYPLOCK_CONF"
+[templates.gtk3]
+input_path = "$GTK3_TEMPLATE"
+output_path = "$GTK3_CSS"
+[templates.gtk4]
+input_path = "$GTK4_TEMPLATE"
+output_path = "$GTK4_CSS"
 EOF
-        mkdir -p "$(dirname "$AUTOTHEME_JSON")"
-        if matugen image "$src" --mode dark --config "$tmpcfg" >/dev/null 2>&1 \
-            && autotheme_valid; then
+        mkdir -p "$(dirname "$AUTOTHEME_JSON")" "$(dirname "$GHOSTTY_THEME")" \
+            "$(dirname "$HYPLOCK_CONF")" "$(dirname "$GTK3_CSS")" "$(dirname "$GTK4_CSS")"
+        if matugen image "$src" --mode dark --config "$tmpcfg" \
+                --import-json "$vib" >/dev/null 2>&1 \
+            && autotheme_valid && [ -f "$GHOSTTY_THEME" ] \
+            && [ -f "$HYPLOCK_CONF" ] && [ -f "$GTK3_CSS" ] && [ -f "$GTK4_CSS" ] \
+            && ! grep -q '{{' "$HYPLOCK_CONF" "$GTK3_CSS" "$GTK4_CSS" "$GHOSTTY_THEME" "$AUTOTHEME_JSON" 2>/dev/null; then
             # matugen records its actual input in {{image}} — for videos
             # that is the temp frame, so pin the real wallpaper path.
             local fixed
@@ -222,16 +352,18 @@ EOF
                 rm -f "$fixed"
             fi
         fi
-        rm -f "$tmpcfg"
+        rm -f "$tmpcfg" "$vib"
     fi
 
     [ -n "$frame" ] && rm -f "$frame"
 
     if [ "$ok" -ne 0 ]; then
-        write_fallback_autotheme "$wall"
+        write_all_fallbacks "$wall"
+        set_hypr_borders
         notify_err "Autotheme" "matugen failed, using fallback dark palette"
         return 1
     fi
+    set_hypr_borders
     return 0
 }
 

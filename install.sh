@@ -23,6 +23,7 @@ pacman_packages=(
     "awww"
     "matugen"
     "jq"
+    "python"
     "ffmpeg"
     "imagemagick"
     "libnotify"

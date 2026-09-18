@@ -284,12 +284,12 @@ PanelWindow {
         Keys.onEnterPressed: picker.activateWallpaper()
         Keys.onSpacePressed: picker.activateWallpaper()
         Keys.onEscapePressed: picker.close()
-        Keys.onUpPressed: (event) => {
+        Keys.onUpPressed: {
           const cols = Math.max(1, Math.floor(wallpaperGrid.width / wallpaperGrid.cellWidth));
-          if (wallpaperGrid.currentIndex < cols) {
+          if (wallpaperGrid.currentIndex < cols)
             searchInput.forceActiveFocus();
-            event.accepted = true;
-          }
+          else
+            wallpaperGrid.moveCurrentIndexUp();
         }
         anchors.top: searchBox.bottom
         anchors.topMargin: 6

@@ -1,4 +1,6 @@
-theme = Gruvbox Dark Hard
+# Generated per-wallpaper by wallpaper_switch.sh (matugen) — see docs/THEMES.md.
+# Missing until the first wallpaper apply; ghostty uses its default meanwhile.
+theme = autotheme
 shell-integration = fish
 window-save-state = never
 working-directory = home

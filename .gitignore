@@ -2,3 +2,7 @@
 hypr/.config/hypr/themes/wallpapers/current
 # Video thumbnails (generated cache for the wallpaper picker).
 hypr/.config/hypr/themes/wallpapers/thumbs/
+# Generated terminal theme (rewritten on every wallpaper switch).
+ghostty/.config/ghostty/themes/autotheme
+# Generated lock-screen config (rendered from hyprlock.conf.template).
+hypr/.config/hypr/hyprlock.conf

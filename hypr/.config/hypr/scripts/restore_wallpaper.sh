@@ -28,8 +28,12 @@ mkdir -p "$(dirname "$CURRENT_LINK")"
 rm -f "$CURRENT_LINK"
 ln -s "$wall" "$CURRENT_LINK"
 
-# the cache survives reboots, but regenerate if it was wiped or corrupted
-if ! autotheme_valid; then
+# the cache survives reboots, but regenerate if it was wiped, corrupted,
+# or any generated file is missing (fresh clone, new template added)
+if ! autotheme_valid || [ ! -f "$GHOSTTY_THEME" ] || [ ! -f "$HYPLOCK_CONF" ] \
+    || [ ! -f "$GTK3_CSS" ] || [ ! -f "$GTK4_CSS" ]; then
     ensure_thumb "$wall"
     generate_autotheme "$wall" || true
 fi
+
+set_hypr_borders

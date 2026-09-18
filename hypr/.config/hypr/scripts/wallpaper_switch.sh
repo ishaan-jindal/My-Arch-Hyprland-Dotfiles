@@ -40,11 +40,11 @@ apply_wallpaper() {
     rm -f "$CURRENT_LINK"
     ln -s "$full" "$CURRENT_LINK"
 
-    # Same file re-applied and the generated theme is still valid: skip
+    # Same file re-applied and the generated outputs are still valid: skip
     # the one-shot matugen run, just repaint + relink.
     local prev=""
     [ -f "$WALL_STATE" ] && prev="$(cat "$WALL_STATE")"
-    if [ "$prev" = "$full" ] && autotheme_valid; then
+    if [ "$prev" = "$full" ] && autotheme_valid && [ -f "$GHOSTTY_THEME" ]; then
         "$HOME/dotfiles/limine/scripts/limine-sync" >/dev/null 2>&1 || true
         return 0
     fi
