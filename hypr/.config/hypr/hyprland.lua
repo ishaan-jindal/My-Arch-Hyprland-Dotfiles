@@ -291,3 +291,18 @@ hl.window_rule({
   center = true,
   size   = { 900, 600 },
 })
+
+-- Frosted glass: the compositor blurs what sits behind the Quickshell
+-- surfaces. ignore_alpha keeps dim scrims (alpha 0.4) and fully-transparent
+-- regions unblurred; only the near-opaque cards/islands frost.
+hl.layer_rule({
+  match = { namespace = "^quickshell-popup$" },
+  blur = true,
+  ignore_alpha = 0.5,
+})
+
+hl.layer_rule({
+  match = { namespace = "^quickshell-bar$" },
+  blur = true,
+  ignore_alpha = 0.5,
+})

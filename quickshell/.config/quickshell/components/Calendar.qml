@@ -120,6 +120,10 @@ Item {
           border.color: Theme.border
           border.width: 1
 
+          Behavior on color {
+            ColorAnimation { duration: Theme.hoverDuration; easing.type: Easing.OutCubic }
+          }
+
           Text {
             anchors.centerIn: parent
             text: modelData.label

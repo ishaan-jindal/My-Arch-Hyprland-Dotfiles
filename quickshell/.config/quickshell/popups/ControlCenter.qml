@@ -27,6 +27,7 @@ PanelWindow {
   visible: ShellState.centerOpen
   exclusionMode: ExclusionMode.Ignore
   WlrLayershell.layer: WlrLayer.Overlay
+  WlrLayershell.namespace: "quickshell-popup"
   WlrLayershell.keyboardFocus: ShellState.centerOpen ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
 
   readonly property bool mainView: ShellState.centerView === "main"
@@ -62,13 +63,29 @@ PanelWindow {
     if (!card || sectionCol.height === 0)
       return;
     const maxY = Math.max(0, sectionCol.height - flick.height);
-    flick.contentY = Math.max(0, Math.min(maxY, card.y - 8));
+    cc.animateTo(Math.max(0, Math.min(maxY, card.y - 8)));
   }
 
   Timer {
     id: scrollRetry
     interval: 80
     onTriggered: cc.scrollToSection()
+  }
+
+  // animated programmatic scroll (longer, calmer than a flick)
+  NumberAnimation {
+    id: scrollAnim
+    target: flick
+    property: "contentY"
+    duration: Theme.scrollDuration
+    easing.type: Easing.OutQuint
+  }
+
+  function animateTo(y) {
+    scrollAnim.stop();
+    scrollAnim.from = flick.contentY;
+    scrollAnim.to = y;
+    scrollAnim.restart();
   }
 
   Connections {
@@ -91,10 +108,26 @@ PanelWindow {
     width: (ccCard.width - 32 - 3 * 8) / 4
     height: 48
     radius: Theme.radius
-    color: on ? Qt.rgba(tint.r, tint.g, tint.b, 0.22) : "transparent"
+    color: pillHover.hovered
+      ? (on ? Qt.rgba(tint.r, tint.g, tint.b, 0.30) : Qt.rgba(tint.r, tint.g, tint.b, 0.08))
+      : (on ? Qt.rgba(tint.r, tint.g, tint.b, 0.22) : "transparent")
     border.color: activeFocus ? Theme.bright : on ? tint : Theme.border
     border.width: 1
     activeFocusOnTab: true
+
+    Behavior on color {
+      ColorAnimation { duration: Theme.hoverDuration; easing.type: Easing.OutCubic }
+    }
+
+    Behavior on border.color {
+      ColorAnimation { duration: Theme.hoverDuration; easing.type: Easing.OutCubic }
+    }
+
+    Behavior on scale {
+      NumberAnimation { duration: Theme.hoverDuration; easing.type: Easing.OutCubic }
+    }
+
+    scale: pillPress.pressed ? 0.97 : 1
 
     Column {
       anchors.centerIn: parent
@@ -103,17 +136,25 @@ PanelWindow {
       Text {
         anchors.horizontalCenter: parent.horizontalCenter
         text: pill.icon
-        color: pill.on ? pill.tint : Theme.fg
+        color: pill.on || pillHover.hovered ? pill.tint : Theme.fg
         font.family: Theme.fontFamily
         font.pixelSize: 15
+
+        Behavior on color {
+          ColorAnimation { duration: Theme.hoverDuration; easing.type: Easing.OutCubic }
+        }
       }
 
       Text {
         anchors.horizontalCenter: parent.horizontalCenter
         text: pill.label
-        color: pill.on ? pill.tint : Theme.muted
+        color: pill.on || pillHover.hovered ? pill.tint : Theme.muted
         font.family: Theme.fontFamily
         font.pixelSize: 9
+
+        Behavior on color {
+          ColorAnimation { duration: Theme.hoverDuration; easing.type: Easing.OutCubic }
+        }
       }
     }
 
@@ -121,7 +162,12 @@ PanelWindow {
     Keys.onReturnPressed: pill.activated()
     Keys.onEnterPressed: pill.activated()
 
+    HoverHandler {
+      id: pillHover
+    }
+
     MouseArea {
+      id: pillPress
       anchors.fill: parent
       cursorShape: Qt.PointingHandCursor
       onClicked: pill.activated()
@@ -155,11 +201,19 @@ PanelWindow {
       border.color: slider.activeFocus ? Theme.accent : "transparent"
       border.width: 1
 
+      Behavior on border.color {
+        ColorAnimation { duration: Theme.hoverDuration }
+      }
+
       Rectangle {
         width: parent.width * Math.max(0, Math.min(1, slider.value))
         height: parent.height
         radius: parent.radius
         color: Theme.accent
+
+        Behavior on width {
+          NumberAnimation { duration: 90; easing.type: Easing.OutCubic }
+        }
       }
     }
 
@@ -192,8 +246,12 @@ PanelWindow {
     border.color: active ? Theme.accent : Theme.border
     border.width: active ? 2 : 1
 
+    Behavior on y {
+      NumberAnimation { duration: Theme.viewDuration; easing.type: Easing.OutCubic }
+    }
+
     Behavior on border.color {
-      ColorAnimation { duration: 160 }
+      ColorAnimation { duration: Theme.hoverDuration }
     }
 
     Column {
@@ -263,8 +321,13 @@ PanelWindow {
 
   // dim scrim, click outside to close
   Rectangle {
+    id: backdrop
     anchors.fill: parent
-    color: "#4d000000"
+    color: Qt.rgba(0, 0, 0, Theme.scrimOpacity * (ShellState.centerOpen ? 1 : 0))
+
+    Behavior on color {
+      ColorAnimation { duration: Theme.popupDuration; easing.type: Easing.OutCubic }
+    }
 
     MouseArea {
       anchors.fill: parent
@@ -285,21 +348,28 @@ PanelWindow {
     radius: Theme.radius
 
     Behavior on height {
-      NumberAnimation { duration: 160; easing.type: Easing.OutCubic }
+      NumberAnimation { duration: Theme.viewDuration; easing.type: Easing.OutCubic }
+    }
+
+    // slight scale-up on open (GPU transform only, layout untouched)
+    scale: ShellState.centerOpen ? 1 : 0.985
+
+    Behavior on scale {
+      NumberAnimation { duration: Theme.popupDuration; easing.type: Easing.OutQuint }
     }
 
     transform: Translate {
-      y: ShellState.centerOpen ? 0 : -90
+      y: ShellState.centerOpen ? 0 : -110
 
       Behavior on y {
-        NumberAnimation { duration: 240; easing.type: Easing.OutCubic }
+        NumberAnimation { duration: Theme.popupDuration; easing.type: Easing.OutQuint }
       }
     }
 
     opacity: ShellState.centerOpen ? 1 : 0
 
     Behavior on opacity {
-      NumberAnimation { duration: 180 }
+      NumberAnimation { duration: Theme.popupDuration * 0.7 }
     }
 
     MouseArea {
@@ -345,6 +415,10 @@ PanelWindow {
           border.color: Theme.border
           border.width: 1
 
+          Behavior on color {
+            ColorAnimation { duration: Theme.hoverDuration; easing.type: Easing.OutCubic }
+          }
+
           Text {
             anchors.centerIn: parent
             text: "\u2039"
@@ -375,6 +449,10 @@ PanelWindow {
           border.color: Theme.border
           border.width: 1
 
+          Behavior on color {
+            ColorAnimation { duration: Theme.hoverDuration; easing.type: Easing.OutCubic }
+          }
+
           Text {
             anchors.centerIn: parent
             text: Icons.close
@@ -398,6 +476,7 @@ PanelWindow {
       // ---------------------------------------------------------------
       // Wi-Fi / Bluetooth views
       // ---------------------------------------------------------------
+      // Wi-Fi / Bluetooth views (cross-faded via opacity)
       WifiPanel {
         id: wifiPanel
         anchors.top: header.bottom
@@ -405,9 +484,14 @@ PanelWindow {
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.bottom: parent.bottom
-        visible: cc.wifiView
-        enabled: visible
+        visible: opacity > 0
+        enabled: cc.wifiView
+        opacity: cc.wifiView ? 1 : 0
         onRequestBack: ShellState.centerBack()
+
+        Behavior on opacity {
+          NumberAnimation { duration: Theme.viewDuration; easing.type: Easing.OutCubic }
+        }
       }
 
       BluetoothPanel {
@@ -417,9 +501,14 @@ PanelWindow {
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.bottom: parent.bottom
-        visible: cc.btView
-        enabled: visible
+        visible: opacity > 0
+        enabled: cc.btView
+        opacity: cc.btView ? 1 : 0
         onRequestBack: ShellState.centerBack()
+
+        Behavior on opacity {
+          NumberAnimation { duration: Theme.viewDuration; easing.type: Easing.OutCubic }
+        }
       }
 
       // ---------------------------------------------------------------
@@ -427,13 +516,18 @@ PanelWindow {
       // ---------------------------------------------------------------
       Item {
         id: mainView
-        visible: cc.mainView
-        enabled: visible
+        visible: opacity > 0
+        enabled: cc.mainView
+        opacity: cc.mainView ? 1 : 0
         anchors.top: header.bottom
         anchors.topMargin: 12
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.bottom: parent.bottom
+
+        Behavior on opacity {
+          NumberAnimation { duration: Theme.viewDuration; easing.type: Easing.OutCubic }
+        }
 
         onVisibleChanged: {
           if (visible)
@@ -491,6 +585,9 @@ PanelWindow {
           contentWidth: width
           contentHeight: sectionCol.height
           boundsBehavior: Flickable.StopAtBounds
+          // calmer, longer glide (Qt's default deceleration is a hard stop)
+          flickDeceleration: 900
+          maximumFlickVelocity: 3200
 
           Column {
             id: sectionCol

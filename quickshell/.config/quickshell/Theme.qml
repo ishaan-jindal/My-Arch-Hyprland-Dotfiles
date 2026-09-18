@@ -24,7 +24,7 @@ Singleton {
   // Not a selectable theme.
   readonly property var fallback: ({
     bg: "#c70a0a0c",
-    bgSolid: "#f20a0a0c",
+    bgSolid: "#b80a0a0c",
     border: "#1c1f26",
     fg: "#e6e6e6",
     bright: "#ffffff",
@@ -164,6 +164,15 @@ Singleton {
   readonly property int barSpacing: 6
   readonly property int widgetPadding: 8
   readonly property int islandMargin: 10
+
+  // ---------------------------------------------------------------------
+  // Motion vocabulary — one place so the whole shell feels the same.
+  // ---------------------------------------------------------------------
+  readonly property int hoverDuration: 150     // color eases
+  readonly property int popupDuration: 300     // popup slide/fade/scale
+  readonly property int viewDuration: 220      // in-popup view swaps
+  readonly property int scrollDuration: 320    // programmatic scrolls
+  readonly property real scrimOpacity: 0.32
 
   // ---------------------------------------------------------------------
   // Current wallpaper (from ~/.cache/wallpaper_state)

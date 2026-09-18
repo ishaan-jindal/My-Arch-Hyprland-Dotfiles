@@ -19,6 +19,7 @@ PanelWindow {
   visible: ShellState.sessionOpen
   exclusionMode: ExclusionMode.Ignore
   WlrLayershell.layer: WlrLayer.Overlay
+  WlrLayershell.namespace: "quickshell-popup"
   WlrLayershell.keyboardFocus: ShellState.sessionOpen ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
 
   readonly property var actions: [
@@ -37,8 +38,13 @@ PanelWindow {
 
   // dim scrim, click outside to close
   Rectangle {
+    id: backdrop
     anchors.fill: parent
-    color: "#66000000"
+    color: Qt.rgba(0, 0, 0, 0.4 * (ShellState.sessionOpen ? 1 : 0))
+
+    Behavior on color {
+      ColorAnimation { duration: Theme.popupDuration; easing.type: Easing.OutCubic }
+    }
 
     MouseArea {
       anchors.fill: parent
@@ -55,6 +61,26 @@ PanelWindow {
     border.color: Theme.border
     border.width: 1
     radius: Theme.radius
+
+    scale: ShellState.sessionOpen ? 1 : 0.97
+
+    Behavior on scale {
+      NumberAnimation { duration: Theme.popupDuration; easing.type: Easing.OutQuint }
+    }
+
+    transform: Translate {
+      y: ShellState.sessionOpen ? 0 : 40
+
+      Behavior on y {
+        NumberAnimation { duration: Theme.popupDuration; easing.type: Easing.OutQuint }
+      }
+    }
+
+    opacity: ShellState.sessionOpen ? 1 : 0
+
+    Behavior on opacity {
+      NumberAnimation { duration: Theme.popupDuration * 0.7 }
+    }
 
     // swallow clicks so the scrim behind doesn't close the menu
     MouseArea {
@@ -150,9 +176,18 @@ PanelWindow {
               : buttonHover.hovered ? Qt.lighter(Theme.bg, 1.6) : "transparent"
             border.color: keys.currentIndex === index ? Theme.accent : Theme.border
             border.width: 1
+            scale: buttonPress.pressed ? 0.96 : 1
 
             Behavior on color {
-              ColorAnimation { duration: 120 }
+              ColorAnimation { duration: Theme.hoverDuration; easing.type: Easing.OutCubic }
+            }
+
+            Behavior on border.color {
+              ColorAnimation { duration: Theme.hoverDuration; easing.type: Easing.OutCubic }
+            }
+
+            Behavior on scale {
+              NumberAnimation { duration: Theme.hoverDuration; easing.type: Easing.OutCubic }
             }
 
             Text {
@@ -163,6 +198,10 @@ PanelWindow {
               color: buttonHover.hovered ? Theme.accentSoft : Theme.fg
               font.family: Theme.fontFamily
               font.pixelSize: 26
+
+              Behavior on color {
+                ColorAnimation { duration: Theme.hoverDuration; easing.type: Easing.OutCubic }
+              }
             }
 
             Text {
@@ -180,6 +219,7 @@ PanelWindow {
             }
 
             MouseArea {
+              id: buttonPress
               anchors.fill: parent
               cursorShape: Qt.PointingHandCursor
               onClicked: sessionMenu.run(button.modelData)

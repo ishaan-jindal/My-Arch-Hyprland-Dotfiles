@@ -19,6 +19,7 @@ PanelWindow {
   visible: ShellState.osdVisible
   exclusionMode: ExclusionMode.Ignore
   WlrLayershell.layer: WlrLayer.Overlay
+  WlrLayershell.namespace: "quickshell-popup"
   mask: Region {
     item: box
   }

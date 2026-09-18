@@ -17,6 +17,7 @@ PanelWindow {
   visible: ShellState.cheatsheetOpen
   exclusionMode: ExclusionMode.Ignore
   WlrLayershell.layer: WlrLayer.Overlay
+  WlrLayershell.namespace: "quickshell-popup"
   WlrLayershell.keyboardFocus: ShellState.cheatsheetOpen ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
 
   readonly property var sections: [
@@ -166,8 +167,13 @@ PanelWindow {
   }
 
   Rectangle {
+    id: backdrop
     anchors.fill: parent
-    color: "#66000000"
+    color: Qt.rgba(0, 0, 0, 0.4 * (ShellState.cheatsheetOpen ? 1 : 0))
+
+    Behavior on color {
+      ColorAnimation { duration: Theme.popupDuration; easing.type: Easing.OutCubic }
+    }
 
     MouseArea {
       anchors.fill: parent
@@ -184,6 +190,26 @@ PanelWindow {
     border.color: Theme.border
     border.width: 1
     radius: Theme.radius
+
+    scale: ShellState.cheatsheetOpen ? 1 : 0.97
+
+    Behavior on scale {
+      NumberAnimation { duration: Theme.popupDuration; easing.type: Easing.OutQuint }
+    }
+
+    transform: Translate {
+      y: ShellState.cheatsheetOpen ? 0 : 30
+
+      Behavior on y {
+        NumberAnimation { duration: Theme.popupDuration; easing.type: Easing.OutQuint }
+      }
+    }
+
+    opacity: ShellState.cheatsheetOpen ? 1 : 0
+
+    Behavior on opacity {
+      NumberAnimation { duration: Theme.popupDuration * 0.7 }
+    }
 
     MouseArea {
       anchors.fill: parent

@@ -22,6 +22,7 @@ PanelWindow {
   visible: Notify.popups.length > 0
   exclusionMode: ExclusionMode.Ignore
   WlrLayershell.layer: WlrLayer.Overlay
+  WlrLayershell.namespace: "quickshell-popup"
   mask: Region {
     item: column
   }

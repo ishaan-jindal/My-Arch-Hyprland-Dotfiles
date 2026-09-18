@@ -22,6 +22,7 @@ PanelWindow {
   visible: ShellState.pickerOpen
   exclusionMode: ExclusionMode.Ignore
   WlrLayershell.layer: WlrLayer.Overlay
+  WlrLayershell.namespace: "quickshell-popup"
   WlrLayershell.keyboardFocus: ShellState.pickerOpen ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
 
   // exposed for diagnostics / tests
@@ -79,8 +80,13 @@ PanelWindow {
 
   // dim scrim, click outside to close
   Rectangle {
+    id: backdrop
     anchors.fill: parent
-    color: "#4d000000"
+    color: Qt.rgba(0, 0, 0, Theme.scrimOpacity * (ShellState.pickerOpen ? 1 : 0))
+
+    Behavior on color {
+      ColorAnimation { duration: Theme.popupDuration; easing.type: Easing.OutCubic }
+    }
 
     MouseArea {
       anchors.fill: parent
@@ -101,21 +107,27 @@ PanelWindow {
     radius: Theme.radius
 
     Behavior on height {
-      NumberAnimation { duration: 160; easing.type: Easing.OutCubic }
+      NumberAnimation { duration: Theme.viewDuration; easing.type: Easing.OutCubic }
+    }
+
+    scale: ShellState.pickerOpen ? 1 : 0.985
+
+    Behavior on scale {
+      NumberAnimation { duration: Theme.popupDuration; easing.type: Easing.OutQuint }
     }
 
     transform: Translate {
-      y: ShellState.pickerOpen ? 0 : -90
+      y: ShellState.pickerOpen ? 0 : -110
 
       Behavior on y {
-        NumberAnimation { duration: 240; easing.type: Easing.OutCubic }
+        NumberAnimation { duration: Theme.popupDuration; easing.type: Easing.OutQuint }
       }
     }
 
     opacity: ShellState.pickerOpen ? 1 : 0
 
     Behavior on opacity {
-      NumberAnimation { duration: 180 }
+      NumberAnimation { duration: Theme.popupDuration * 0.7 }
     }
 
     MouseArea {
@@ -302,6 +314,8 @@ PanelWindow {
         clip: true
         cellWidth: Math.floor(width / 4)
         cellHeight: 172
+        flickDeceleration: 900
+        maximumFlickVelocity: 3200
         model: filteredWalls
 
         delegate: Rectangle {
@@ -318,7 +332,21 @@ PanelWindow {
           radius: Theme.radius
           color: Theme.bg
           border.width: isCurrent ? 2 : 1
-          border.color: GridView.isCurrentItem ? Theme.accent : isCurrent ? Theme.accent : Theme.border
+          border.color: GridView.isCurrentItem ? Theme.accent : isCurrent ? Theme.accent : cardHover.hovered ? Theme.muted : Theme.border
+
+          Behavior on border.color {
+            ColorAnimation { duration: Theme.hoverDuration; easing.type: Easing.OutCubic }
+          }
+
+          Behavior on scale {
+            NumberAnimation { duration: Theme.hoverDuration; easing.type: Easing.OutCubic }
+          }
+
+          scale: cardHover.hovered ? 1.02 : 1
+
+          HoverHandler {
+            id: cardHover
+          }
 
           Image {
             anchors.fill: parent

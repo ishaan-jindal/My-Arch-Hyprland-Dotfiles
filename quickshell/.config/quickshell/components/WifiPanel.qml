@@ -107,6 +107,10 @@ Item {
       border.color: Theme.border
       border.width: 1
 
+      Behavior on color {
+        ColorAnimation { duration: Theme.hoverDuration; easing.type: Easing.OutCubic }
+      }
+
       Text {
         anchors.centerIn: parent
         text: "\u2039"
@@ -218,9 +222,21 @@ Item {
       width: networkList.width
       height: 40
       radius: Theme.radius
-      color: current ? Theme.hover : "transparent"
+      color: current ? Theme.hover : rowHover.hovered ? Qt.rgba(Theme.hover.r, Theme.hover.g, Theme.hover.b, 0.5) : "transparent"
       border.color: current ? Theme.accent : Theme.border
       border.width: 1
+
+      Behavior on color {
+        ColorAnimation { duration: Theme.hoverDuration; easing.type: Easing.OutCubic }
+      }
+
+      Behavior on border.color {
+        ColorAnimation { duration: Theme.hoverDuration; easing.type: Easing.OutCubic }
+      }
+
+      HoverHandler {
+        id: rowHover
+      }
 
       SignalBars {
         anchors.left: parent.left
@@ -349,6 +365,10 @@ Item {
           border.color: Theme.accent
           border.width: 1
 
+          Behavior on color {
+            ColorAnimation { duration: Theme.hoverDuration; easing.type: Easing.OutCubic }
+          }
+
           function activate() {
             if (!root.pending)
               return;
@@ -382,6 +402,10 @@ Item {
           color: cancelHover.hovered ? Theme.hover : "transparent"
           border.color: Theme.border
           border.width: 1
+
+          Behavior on color {
+            ColorAnimation { duration: Theme.hoverDuration; easing.type: Easing.OutCubic }
+          }
 
           Text {
             anchors.centerIn: parent

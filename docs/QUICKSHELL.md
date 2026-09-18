@@ -148,6 +148,28 @@ The OSD appears automatically on volume/mute/brightness/microphone changes
 from any source (`wpctl`, media keys, `pavucontrol`, the control centre
 slider).
 
+## Frosted glass + motion
+
+Popups (control centre, launcher, picker, session, cheatsheet, OSD,
+notifications) use compositor-side frosted glass: every popup PanelWindow
+sets `WlrLayershell.namespace: "quickshell-popup"` and `hyprland.lua` adds
+
+```lua
+hl.layer_rule({ match = { namespace = "^quickshell-popup$" }, blur = true, ignore_alpha = 0.5 })
+hl.layer_rule({ match = { namespace = "^quickshell-bar$" },     blur = true, ignore_alpha = 0.5 })
+```
+
+so Hyprland blurs what sits behind the near-opaque cards and bar islands
+(dim scrims at alpha 0.4 and empty regions stay unblurred). The blur costs
+nothing in the shell — it is the compositor's existing blur pipeline.
+
+Popup animations share one motion vocabulary defined in `Theme.qml`
+(`popupDuration` 300 ms `OutQuint` slide+fade+scale, `viewDuration` 220 ms
+for Wi-Fi/Bluetooth view cross-fades, `scrollDuration` 320 ms for
+programmatic scrolls, `hoverDuration` 150 ms for every hover/active color
+ease). Scrolling uses softer `flickDeceleration`/`maximumFlickVelocity`
+for a longer glide.
+
 ## Data sources
 
 - Workspaces/windows: Hyprland IPC (`Quickshell.Hyprland`)

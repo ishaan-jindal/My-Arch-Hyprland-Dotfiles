@@ -69,6 +69,10 @@ Item {
       border.color: Theme.border
       border.width: 1
 
+      Behavior on color {
+        ColorAnimation { duration: Theme.hoverDuration; easing.type: Easing.OutCubic }
+      }
+
       Text {
         anchors.centerIn: parent
         text: "\u2039"
@@ -185,9 +189,21 @@ Item {
       width: deviceList.width
       height: 40
       radius: Theme.radius
-      color: current ? Theme.hover : "transparent"
+      color: current ? Theme.hover : rowHover.hovered ? Qt.rgba(Theme.hover.r, Theme.hover.g, Theme.hover.b, 0.5) : "transparent"
       border.color: current ? Theme.accent : Theme.border
       border.width: 1
+
+      Behavior on color {
+        ColorAnimation { duration: Theme.hoverDuration; easing.type: Easing.OutCubic }
+      }
+
+      Behavior on border.color {
+        ColorAnimation { duration: Theme.hoverDuration; easing.type: Easing.OutCubic }
+      }
+
+      HoverHandler {
+        id: rowHover
+      }
 
       Image {
         id: deviceIcon

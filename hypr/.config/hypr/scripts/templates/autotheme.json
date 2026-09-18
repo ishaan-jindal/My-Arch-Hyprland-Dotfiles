@@ -3,7 +3,7 @@
   "mode": "dark",
   "source": "{{colors.source_color.default.hex}}",
   "bg": "#c7{{colors.surface.dark.hex_stripped}}",
-  "bgSolid": "#f2{{colors.surface.dark.hex_stripped}}",
+  "bgSolid": "#b8{{colors.surface.dark.hex_stripped}}",
   "border": "{{colors.outline_variant.dark.hex}}",
   "fg": "{{colors.on_surface.dark.hex}}",
   "bright": "{{ vibrant.hex }}",

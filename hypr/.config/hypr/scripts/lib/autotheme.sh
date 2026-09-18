@@ -241,7 +241,7 @@ write_fallback_autotheme() {
   "mode": "dark",
   "source": "#8b8f98",
   "bg": "#c70a0a0c",
-  "bgSolid": "#f20a0a0c",
+  "bgSolid": "#b80a0a0c",
   "border": "#1c1f26",
   "fg": "#e6e6e6",
   "bright": "#ffffff",

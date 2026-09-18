@@ -21,6 +21,7 @@ PanelWindow {
   visible: ShellState.launcherOpen
   exclusionMode: ExclusionMode.Ignore
   WlrLayershell.layer: WlrLayer.Overlay
+  WlrLayershell.namespace: "quickshell-popup"
   WlrLayershell.keyboardFocus: visible ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
 
   property string query: ""
@@ -182,8 +183,13 @@ PanelWindow {
 
   // dim scrim, click outside the card to close
   Rectangle {
+    id: backdrop
     anchors.fill: parent
-    color: "#66000000"
+    color: Qt.rgba(0, 0, 0, 0.4 * (ShellState.launcherOpen ? 1 : 0))
+
+    Behavior on color {
+      ColorAnimation { duration: Theme.popupDuration; easing.type: Easing.OutCubic }
+    }
 
     MouseArea {
       anchors.fill: parent
@@ -200,6 +206,26 @@ PanelWindow {
     border.color: Theme.border
     border.width: 1
     radius: Theme.radius
+
+    scale: ShellState.launcherOpen ? 1 : 0.97
+
+    Behavior on scale {
+      NumberAnimation { duration: Theme.popupDuration; easing.type: Easing.OutQuint }
+    }
+
+    transform: Translate {
+      y: ShellState.launcherOpen ? 0 : 30
+
+      Behavior on y {
+        NumberAnimation { duration: Theme.popupDuration; easing.type: Easing.OutQuint }
+      }
+    }
+
+    opacity: ShellState.launcherOpen ? 1 : 0
+
+    Behavior on opacity {
+      NumberAnimation { duration: Theme.popupDuration * 0.7 }
+    }
 
     MouseArea {
       anchors.fill: parent
@@ -226,9 +252,21 @@ PanelWindow {
           width: tabRow.implicitWidth + 24
           height: 30
           radius: Theme.radius
-          color: active ? Theme.hover : "transparent"
+          color: active ? Theme.hover : tabHover.hovered ? Qt.rgba(Theme.hover.r, Theme.hover.g, Theme.hover.b, 0.5) : "transparent"
           border.color: active ? Theme.accent : Theme.border
           border.width: 1
+
+          Behavior on color {
+            ColorAnimation { duration: Theme.hoverDuration; easing.type: Easing.OutCubic }
+          }
+
+          Behavior on border.color {
+            ColorAnimation { duration: Theme.hoverDuration; easing.type: Easing.OutCubic }
+          }
+
+          HoverHandler {
+            id: tabHover
+          }
 
           Row {
             id: tabRow
@@ -241,6 +279,10 @@ PanelWindow {
               color: parent.parent.active ? Theme.accent : Theme.muted
               font.family: Theme.fontFamily
               font.pixelSize: 12
+
+              Behavior on color {
+                ColorAnimation { duration: Theme.hoverDuration; easing.type: Easing.OutCubic }
+              }
             }
 
             Text {
@@ -249,6 +291,10 @@ PanelWindow {
               color: parent.parent.active ? Theme.bright : Theme.muted
               font.family: Theme.fontFamily
               font.pixelSize: 12
+
+              Behavior on color {
+                ColorAnimation { duration: Theme.hoverDuration; easing.type: Easing.OutCubic }
+              }
             }
           }
 
@@ -277,6 +323,10 @@ PanelWindow {
       color: "transparent"
       border.color: input.activeFocus ? Theme.accent : Theme.border
       border.width: 1
+
+      Behavior on border.color {
+        ColorAnimation { duration: Theme.hoverDuration; easing.type: Easing.OutCubic }
+      }
 
       Text {
         anchors.left: parent.left
@@ -357,6 +407,12 @@ PanelWindow {
       model: launcher.items
       currentIndex: 0
       boundsBehavior: Flickable.StopAtBounds
+      // calmer glide, same feel as the control centre
+      flickDeceleration: 900
+      maximumFlickVelocity: 3200
+
+      // keep the selected row in view while arrowing through results
+      onCurrentIndexChanged: positionViewAtIndex(currentIndex, ListView.Contain)
 
       delegate: Rectangle {
         id: row
@@ -371,6 +427,14 @@ PanelWindow {
         color: selected ? Theme.hover : "transparent"
         border.color: selected ? Theme.accent : Theme.border
         border.width: selected ? 1 : 0
+
+        Behavior on color {
+          ColorAnimation { duration: Theme.hoverDuration; easing.type: Easing.OutCubic }
+        }
+
+        Behavior on border.color {
+          ColorAnimation { duration: Theme.hoverDuration; easing.type: Easing.OutCubic }
+        }
 
         Column {
           anchors.left: parent.left
