@@ -23,6 +23,9 @@ BarModule {
   color: !adapter || !adapter.enabled
     ? Theme.muted
     : connectedCount > 0 ? Theme.accentSoft : Theme.fg
+  iconColor: !adapter || !adapter.enabled
+    ? Theme.muted
+    : connectedCount > 0 ? Theme.accentSoft : Theme.accent
   interactive: true
   onClicked: ShellState.openCenterView("bluetooth")
 }

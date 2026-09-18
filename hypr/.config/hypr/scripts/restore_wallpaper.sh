@@ -1,21 +1,21 @@
 #!/bin/bash
+# Repaint the last wallpaper on login (instant, no transition) and make sure
+# a valid autotheme exists for it.
 set -u
 
-THEME_STATE="$HOME/.cache/theme_state"
-WALL_STATE_PREFIX="$HOME/.cache/wallpaper_state_"
-CURRENT_LINK="$HOME/.config/hypr/themes/wallpapers/current"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=lib/autotheme.sh
+. "$SCRIPT_DIR/lib/autotheme.sh"
 
-theme=$(cat "$THEME_STATE" 2>/dev/null || true)
-[ -z "${theme:-}" ] && exit 0
-
-wall=$(cat "${WALL_STATE_PREFIX}${theme}" 2>/dev/null || true)
+wall=$(cat "$WALL_STATE" 2>/dev/null || true)
 [ -z "${wall:-}" ] && exit 0
+[ -f "$wall" ] || exit 0
 
 # kill existing
 pkill mpvpaper >/dev/null 2>&1 || true
 pkill awww-daemon >/dev/null 2>&1 || true
 
-if [[ "$wall" == *.mp4 ]]; then
+if is_video "$wall"; then
     mpvpaper -o "loop --no-audio --hwdec=auto --vo=gpu --profile=fast" "*" "$wall" &
 else
     awww-daemon >/dev/null 2>&1 &
@@ -27,3 +27,9 @@ fi
 mkdir -p "$(dirname "$CURRENT_LINK")"
 rm -f "$CURRENT_LINK"
 ln -s "$wall" "$CURRENT_LINK"
+
+# the cache survives reboots, but regenerate if it was wiped or corrupted
+if ! autotheme_valid; then
+    ensure_thumb "$wall"
+    generate_autotheme "$wall" || true
+fi

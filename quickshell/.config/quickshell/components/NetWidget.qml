@@ -40,6 +40,7 @@ BarModule {
     return Icons.warning;
   }
   color: connected ? Theme.fg : Theme.critical
+  iconColor: connected ? Theme.accent : Theme.critical
   interactive: true
   onClicked: ShellState.openCenterView("wifi")
 }

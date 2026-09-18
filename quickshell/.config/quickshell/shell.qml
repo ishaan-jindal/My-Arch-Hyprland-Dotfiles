@@ -7,10 +7,7 @@ import Quickshell.Bluetooth
 import "components"
 import "popups"
 
-// Quickshell entry point.
-//
-// Runs *alongside* Waybar/Wofi/Wlogout/Swaync while the migration is in
-// progress; see docs/QUICKSHELL.md for the cut-over checklist.
+// Quickshell entry point. See docs/QUICKSHELL.md.
 ShellRoot {
   Bar {}
   NotificationPopups {}
@@ -40,7 +37,7 @@ ShellRoot {
       ShellState.toggleLauncher(page);
     }
 
-    // qs ipc call shell openPicker themes | wallpapers
+    // qs ipc call shell openPicker wallpapers (tab arg kept for compat)
     function openPicker(tab: string): void {
       ShellState.togglePicker(tab);
     }
@@ -83,7 +80,10 @@ ShellRoot {
     // qs ipc call shell diagnostics
     function diagnostics(): string {
       return JSON.stringify({
-        theme: Theme.current,
+        accent: Theme.palette.accent,
+        bg: Theme.palette.bg,
+        wallpaper: Theme.currentWallpaper,
+        wallpaperCount: Theme.walls.length,
         screens: Quickshell.screens.length,
         workspaces: Hyprland.workspaces.values.length,
         cpu: Sys.cpu,
@@ -110,7 +110,7 @@ ShellRoot {
         pickerTab: ShellState.pickerTab,
         pickerIndex: picker.pickerIndex,
         pickerCount: picker.pickerCount,
-        pickerFocus: picker.wallpapers ? picker.wallpaperGridFocus : picker.themeGridFocus,
+        pickerFocus: picker.wallpaperGridFocus,
         calendarSelected: Qt.formatDateTime(controlCenter.calendarSelected, "yyyy-MM-dd"),
         wifiListFocus: controlCenter.wifiListFocus,
         btListFocus: controlCenter.btListFocus,

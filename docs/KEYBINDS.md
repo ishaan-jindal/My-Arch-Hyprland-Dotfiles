@@ -20,8 +20,7 @@ Main modifier: `SUPER`
   display, power, sound sections, calendar, media, notifications — bar
   widgets deep-link straight to their section)
 - `Super + V` → clipboard history
-- `Super + T` → wallpaper picker (current theme)
-- `Super + Shift + T` → theme picker
+- `Super + T` → wallpaper picker (theme follows the wallpaper automatically)
 - `Super + K` → keybind cheatsheet
 - `Super + Shift + K` → stop Quickshell
 - `Super + Shift + W` → start Quickshell
@@ -29,8 +28,8 @@ Main modifier: `SUPER`
 Launcher: type to filter · `↑ ↓` select · `Enter` run · `Tab` switch
 apps/clipboard · `Esc` close.
 
-Picker: `← → ↑ ↓` navigate · `Enter` apply · `Tab` switch themes/wallpapers ·
-`Esc` close.
+Picker: type to filter · `↓`/`Enter` to grid/apply · `← → ↑ ↓` navigate ·
+`Enter`/`Space` apply · `Esc` clear search, then close.
 
 Control centre: `Tab` moves focus, `Space`/`Enter` activate, `← →` adjust the
 volume slider / calendar day, `PgUp`/`PgDn` change month, `Esc` backs out

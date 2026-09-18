@@ -4,11 +4,10 @@ import Quickshell.Wayland
 import Quickshell.Io
 import ".."
 
-// Unified launcher (wofi replacement) with four pages:
+// Unified launcher (wofi replacement) with two pages:
 //   apps       - desktop entries (was `wofi --show drun`)
-//   themes     - theme switcher (was `theme_toggle.sh`)
-//   wallpapers - wallpaper switcher for the current theme (was `wallpaper_switch.sh`)
 //   clipboard  - cliphist history (was `cliphist list | wofi --dmenu`)
+// Wallpapers live in the slide-down picker (was `wallpaper_switch.sh`).
 PanelWindow {
   id: launcher
 
@@ -72,8 +71,6 @@ PanelWindow {
           kind: "clipboard",
           label: preview.length > 90 ? preview.substring(0, 90) + "…" : preview,
           sub: "clipboard entry #" + m[1],
-          glyph: Icons.clipboard,
-          iconPath: "",
           run: ((id) => () => {
             Quickshell.execDetached({
               command: ["sh", "-c", "cliphist decode " + id + " | wl-copy"]
@@ -126,8 +123,6 @@ PanelWindow {
       kind: "app",
       label: entry.name || entry.id,
       sub: entry.genericName || entry.comment || "",
-      glyph: "",
-      iconPath: entry.icon ? Quickshell.iconPath(entry.icon, true) : "",
       run: () => {
         if (entry.runInTerminal)
           Quickshell.execDetached({ command: ["ghostty", "-e"].concat(entry.command) });
@@ -377,36 +372,8 @@ PanelWindow {
         border.color: selected ? Theme.accent : Theme.border
         border.width: selected ? 1 : 0
 
-        Image {
-          id: rowIcon
-          anchors.left: parent.left
-          anchors.leftMargin: 10
-          anchors.verticalCenter: parent.verticalCenter
-          width: 22
-          height: 22
-          source: row.modelData.iconPath
-          sourceSize.width: 22
-          sourceSize.height: 22
-          smooth: true
-          visible: row.modelData.iconPath !== ""
-        }
-
-        Text {
-          id: rowGlyph
-          anchors.left: parent.left
-          anchors.leftMargin: 10
-          anchors.verticalCenter: parent.verticalCenter
-          width: 22
-          horizontalAlignment: Text.AlignHCenter
-          text: row.modelData.glyph
-          color: row.selected ? Theme.accent : Theme.muted
-          font.family: Theme.fontFamily
-          font.pixelSize: 15
-          visible: row.modelData.iconPath === ""
-        }
-
         Column {
-          anchors.left: rowIcon.right
+          anchors.left: parent.left
           anchors.leftMargin: 12
           anchors.right: parent.right
           anchors.rightMargin: 12

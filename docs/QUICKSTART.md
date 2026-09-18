@@ -19,8 +19,8 @@ Or install manually (example subset):
 
 ```bash
 sudo pacman -S hyprland hyprlock hyprshot hyprsunset quickshell upower ghostty \
-  awww jq libnotify wl-clipboard cliphist brightnessctl playerctl \
-  stow neovim ripgrep fd
+  awww matugen jq ffmpeg imagemagick libnotify wl-clipboard cliphist \
+  brightnessctl playerctl stow neovim ripgrep fd
 yay -S mpvpaper
 # Optional browser bound to Super+B:
 # yay -S zen-browser-bin
@@ -61,8 +61,8 @@ At minimum, verify:
   (no `nm-applet`/`blueman` tray applets needed)
 - `Super + R` opens the app launcher
 - `Super + K` shows the keybind cheatsheet
-- `Super + Shift + T` opens the theme picker and re-themes the bar live
-- `Super + T` opens the wallpaper picker for the current theme
+- `Super + T` opens the wallpaper picker and re-themes the bar live from
+  the selected wallpaper (matugen, dark-only)
 
 Shell not starting? Run `quickshell` in a terminal and watch for QML errors,
 then check `qs ipc call shell diagnostics`.
@@ -95,17 +95,18 @@ qs ipc call shell diagnostics       # JSON state dump
 Check that the stow symlinks exist:
 
 ```bash
-ls -l ~/.config/quickshell/shell.qml ~/.config/hypr/themes/themes.json
+ls -l ~/.config/quickshell/shell.qml ~/.config/hypr/themes/wallpapers/assets | head
 ```
 
 ### Theme doesn't change
 
-Make sure `themes.json` parses and the state file is writable:
+Make sure matugen runs and the state files are writable:
 
 ```bash
-jq . ~/.config/hypr/themes/themes.json >/dev/null && echo themes.json OK
-cat ~/.cache/theme_state
-~/.config/hypr/scripts/theme_toggle.sh apply obsidian
+matugen image ~/.config/hypr/themes/wallpapers/assets/red.jpg --mode dark --show-colors | head
+cat ~/.cache/wallpaper_state
+jq . ~/.cache/autotheme.json | head -20
+~/.config/hypr/scripts/wallpaper_switch.sh apply red.jpg
 ```
 
 ### Wallpaper not changing

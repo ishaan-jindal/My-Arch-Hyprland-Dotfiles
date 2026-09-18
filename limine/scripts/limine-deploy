@@ -1,14 +1,18 @@
 #!/usr/bin/env bash
-# Deploy/sync the Limine boot menu: theme palette + wallpapers + font.
+# Deploy/sync the Limine boot menu: palette + wallpapers + font.
 #
 # Installed root-owned at /usr/local/bin/limine-deploy, invoked as root:
 #   sudo limine-deploy            # sync config + current desktop wallpaper (fast, no args)
 #   sudo limine-deploy --install  # (re)install font + wallpaper pack + config
 #
-# Safety: all inputs are validated. The theme must match a fixed table and the
-# wallpaper must resolve inside the Hyprland wallpaper assets directory, so the
-# passwordless sudoers rule for the no-argument form cannot be used to inject
-# arbitrary config content or copy arbitrary files.
+# The palette comes from the generated ~/.cache/autotheme.json (written by
+# wallpaper_switch.sh via matugen), so the boot menu follows the wallpaper
+# with no theme configs. Falls back to a static dark palette when the file
+# is missing or invalid.
+#
+# Safety: the wallpaper must resolve inside the Hyprland wallpaper assets
+# directory, so the passwordless sudoers rule for the no-argument form cannot
+# be used to inject arbitrary config content or copy arbitrary files.
 set -euo pipefail
 
 [ "$(id -u)" -eq 0 ] || { echo "limine-deploy: must run as root" >&2; exit 1; }
@@ -17,21 +21,49 @@ ESP=/boot
 EFI_DIR="$ESP/EFI/limine"
 ASSET_DIR=/home/sacred/dotfiles/limine/assets
 WALLPAPER_LINK=/home/sacred/.config/hypr/themes/wallpapers/current
-THEME_STATE=/home/sacred/.cache/theme_state
+AUTOTHEME=/home/sacred/.cache/autotheme.json
 ROOT_UUID=75fe80cc-5e74-4ff7-8d7a-2486a176e866
 
-THEME="$(cat "$THEME_STATE" 2>/dev/null || true)"
+# defaults: static dark floor
+BG=0a0a0c; FG=e6e6e6; MUTED=8b8f98; SEL_BG=3a3f4b; SEL_FG=ffffff; ACCENT=ffffff
 
-case "$THEME" in
-    obsidian) BG=0a0a0c; FG=e6e6e6; MUTED=8b8f98; SEL_BG=3a3f4b; SEL_FG=ffffff; ACCENT=ffffff ;;
-    crimson)  BG=08080a; FG=e8e8e8; MUTED=8a8a8a; SEL_BG=ff2a3d; SEL_FG=ffffff; ACCENT=ff2a3d ;;
-    aether)   BG=141820; FG=eaf2ff; MUTED=9aa6b2; SEL_BG=7aa2f7; SEL_FG=ffffff; ACCENT=7aa2f7 ;;
-    ember)    BG=140e08; FG=e6d3b3; MUTED=a89984; SEL_BG=e0af68; SEL_FG=140e08; ACCENT=e0af68 ;;
-    drift)    BG=12141a; FG=d6dbe3; MUTED=8f96a3; SEL_BG=c792ea; SEL_FG=12141a; ACCENT=7aa2a9 ;;
-    windows)  BG=202226; FG=e6e6e6; MUTED=b3b3b3; SEL_BG=283f4d; SEL_FG=e6e6e6; ACCENT=4cc2ff ;;
-    *)        echo "limine-deploy: unknown theme '${THEME:-<empty>}', using obsidian" >&2
-              THEME=obsidian; BG=0a0a0c; FG=e6e6e6; MUTED=8b8f98; SEL_BG=3a3f4b; SEL_FG=ffffff; ACCENT=ffffff ;;
-esac
+# strip a "#RRGGBB" / "#AARRGGBB" color down to RRGGBB
+strip_color() {
+    local h="${1#\#}"
+    if [ "${#h}" -eq 8 ]; then
+        h="${h:2}"
+    fi
+    if [[ "$h" =~ ^[0-9a-fA-F]{6}$ ]]; then
+        printf '%s' "$h"
+    else
+        return 1
+    fi
+}
+
+# 0 when dark text reads better on the given RRGGBB background
+dark_text_reads_better() {
+    local h="$1"
+    local r=$((16#${h:0:2})) g=$((16#${h:2:2})) b=$((16#${h:4:2}))
+    [ $((299 * r + 587 * g + 114 * b)) -gt $((600 * 255)) ]
+}
+
+if command -v jq >/dev/null 2>&1 && [ -f "$AUTOTHEME" ]; then
+    if jq -e '[.bgSolid, .fg, .muted, .accent]
+        | all(test("^#([0-9a-fA-F]{6}|[0-9a-fA-F]{8})$"))' "$AUTOTHEME" >/dev/null 2>&1; then
+        BG="$(strip_color "$(jq -r '.bgSolid' "$AUTOTHEME")")" || BG=0a0a0c
+        FG="$(strip_color "$(jq -r '.fg' "$AUTOTHEME")")" || FG=e6e6e6
+        MUTED="$(strip_color "$(jq -r '.muted' "$AUTOTHEME")")" || MUTED=8b8f98
+        ACCENT="$(strip_color "$(jq -r '.accent' "$AUTOTHEME")")" || ACCENT=ffffff
+        SEL_BG="$ACCENT"
+        if dark_text_reads_better "$ACCENT"; then
+            SEL_FG="$BG"
+        else
+            SEL_FG="ffffff"
+        fi
+    else
+        echo "limine-deploy: invalid autotheme, using fallback palette" >&2
+    fi
+fi
 
 render_config() {
     local conf w
@@ -79,7 +111,7 @@ EOF
     } > "$conf"
     install -m644 "$conf" "$ESP/limine.conf"
     rm -f "$conf"
-    echo "limine-deploy: /boot/limine.conf written (theme: $THEME)"
+    echo "limine-deploy: /boot/limine.conf written (accent: $ACCENT)"
 }
 
 sync_wallpaper() {

@@ -16,7 +16,7 @@ package list; Quickshell owns every one of those responsibilities.
 | -------------- | -------------- |
 | Bar | `components/Bar.qml` (one `PanelWindow` per screen) |
 | Launcher | `popups/Launcher.qml` (apps + clipboard pages) |
-| Theme / wallpaper picker | `popups/Picker.qml` (slide-down, live previews) |
+| Wallpaper picker | `popups/Picker.qml` (slide-down, live scan of assets dir) |
 | Wi-Fi panel | `components/WifiPanel.qml` (control centre view: scan, connect, PSK prompt) |
 | Bluetooth panel | `components/BluetoothPanel.qml` (control centre view: scan, pair, connect, forget) |
 | Calendar | `components/Calendar.qml` (control centre) |
@@ -40,8 +40,7 @@ Autostart and all binds live in `hypr/.config/hypr/hyprland.lua`
 | ---- | ------ |
 | `Super + R` | Launcher (apps) |
 | `Super + V` | Launcher → clipboard history |
-| `Super + T` | Launcher → wallpapers for current theme |
-| `Super + Shift + T` | Launcher → themes |
+| `Super + T` | Wallpaper picker (auto-themes the desktop) |
 | `Super + L` | Session menu |
 | `Super + C` | Control centre |
 | `Super + K` | Keybind cheatsheet |
@@ -60,7 +59,6 @@ qs ipc show                          # list targets/functions
 qs ipc call shell toggleLauncher
 qs ipc call shell openLauncher apps
 qs ipc call shell openLauncher clipboard
-qs ipc call shell openPicker themes
 qs ipc call shell openPicker wallpapers
 qs ipc call shell toggleSession
 qs ipc call shell toggleCenter
@@ -80,7 +78,7 @@ Everything is reachable and usable without a mouse:
 | Widget | Keys |
 | ------ | ---- |
 | Launcher | type to filter · `↑ ↓` select · `Enter` run · `Tab` switch apps/clipboard · `Esc` close |
-| Picker (themes/wallpapers) | `← → ↑ ↓` navigate · `Enter`/`Space` apply · `Tab` switch tab · `Esc` close |
+| Picker (wallpapers) | type to filter · `↓` to grid · `← → ↑ ↓` navigate · `Enter`/`Space` apply · `Esc` clear/close |
 | Control centre | `Tab`/`Shift+Tab` cycle toggles → calendar → volume · `Space`/`Enter` activate · `← →` (±1% volume, day in calendar) · `↑ ↓` week · `PgUp`/`PgDn` month · `Home` today · `Esc` back, then close |
 | Wi-Fi panel | `↑ ↓` select · `Enter` connect/disconnect (PSK prompt has its own input) · `s` rescan · `Esc` back |
 | Bluetooth panel | `↑ ↓` select · `Enter` connect/pair · `Del`/`f` forget · `s` scan · `Esc` back |
@@ -93,7 +91,7 @@ Everything is reachable and usable without a mouse:
 quickshell/.config/quickshell/
 ├── shell.qml                 # entry point: window instances + IPC handlers
 ├── qmldir                    # singleton declarations
-├── Theme.qml                 # themes.json + ~/.cache/theme_state → palettes
+├── Theme.qml                 # ~/.cache/autotheme.json → palette (matugen)
 ├── Icons.qml                 # Nerd Font glyphs (lifted from the old Waybar config)
 ├── Sys.qml                   # CPU/mem/temp/brightness/profile/night light/audio/battery
 ├── ShellState.qml            # popup + OSD state, persisted dnd/night-light flags
@@ -109,7 +107,7 @@ quickshell/.config/quickshell/
 │   └── Clock/Tray/Bluetooth/NetWidget/Audio/Cpu/Memory/Temperature/Backlight/Battery.qml
 └── popups/
     ├── Launcher.qml          # apps + clipboard pages
-    ├── Picker.qml            # slide-down theme/wallpaper picker
+    ├── Picker.qml            # slide-down wallpaper picker
     ├── SessionMenu.qml       # lock / logout / power actions
     ├── ControlCenter.qml     # toggles, calendar, audio, media, notifications
     ├── NotificationPopups.qml
@@ -119,18 +117,18 @@ quickshell/.config/quickshell/
 
 ## Theming
 
-`Theme.qml` treats the existing theme system as the source of truth:
+`Theme.qml` reads the matugen-generated `~/.cache/autotheme.json` (see
+[THEMES.md](THEMES.md)):
 
-- `~/.config/hypr/themes/themes.json` → theme list, tags, wallpapers
-- `~/.cache/theme_state` (written by `theme_toggle.sh`) → active theme
-- Six palettes (`obsidian`, `crimson`, `aether`, `ember`, `drift`)
-  live in `Theme.qml`; see [THEMES.md](THEMES.md)
+- `~/.config/hypr/themes/wallpapers/assets/` → live-scanned wallpaper list
+- `~/.cache/wallpaper_state` → current wallpaper path
+- `~/.cache/autotheme.json` → dark palette for the current wallpaper
 
-Both files are watched, so selecting a theme in the launcher (or running
-`theme_toggle.sh apply <theme>`) re-themes the entire shell live: every color
-cross-fades over ~320 ms via the palette blending in `Theme.qml`, and the
-wallpaper wipes in with the same `awww` transition as a manual wallpaper
-switch. Adding a palette automatically gets both behaviors.
+The file is watched, so applying a wallpaper (`Super + T` or
+`wallpaper_switch.sh apply <file>`) re-themes the entire shell live: every
+color cross-fades over ~320 ms via the palette blending in `Theme.qml`, and
+the wallpaper animates in with a random `wave`/`wipe` `awww` transition. Dropping a new file
+into the assets dir is enough — no registry, no tags, no config edits.
 
 ## Widget behaviour
 

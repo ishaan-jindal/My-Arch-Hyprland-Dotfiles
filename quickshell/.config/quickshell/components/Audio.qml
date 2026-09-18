@@ -12,6 +12,7 @@ BarModule {
   text: Math.round(vol * 100) + "%"
   icon: glyph
   color: muted ? Theme.muted : Theme.fg
+  iconColor: muted ? Theme.muted : Theme.accent
   interactive: true
   onClicked: ShellState.openCenterSection("audio")
   onMiddleClicked: Sys.toggleMute()

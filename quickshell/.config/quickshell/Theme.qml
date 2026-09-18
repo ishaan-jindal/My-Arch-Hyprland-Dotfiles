@@ -4,134 +4,77 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 
-// Theme bridge.
+// Autotheme bridge — fully dynamic, no theme configs.
 //
-// Reads the *existing* single source of truth for the desktop theme
-// (hypr/.config/hypr/themes/themes.json) plus the current selection out of
-// ~/.cache/theme_state (written by hypr/scripts/theme_toggle.sh), so the
-// Quickshell shell stays in lockstep with Waybar/Wofi/Wlogout/Swaync while
-// both stacks run side by side.
+// `wallpaper_switch.sh apply <file>` runs matugen once (dark-only Material
+// You) and writes ~/.cache/autotheme.json; this singleton watches that file
+// and re-colors the bar, launcher, control centre, session menu,
+// notifications and OSDs live. Any image/video dropped into the wallpaper
+// assets dir appears in the picker via the scanner below — nothing is
+// registered anywhere.
 //
-// The palette values below were ported 1:1 from the per-theme Waybar CSS
-// (hypr/.config/hypr/themes/waybar/<theme>/style.css).
+// Palette roles: bg, bgSolid, border, fg, bright, muted, hover, accent,
+// accentSoft, critical. Colors are "#RRGGBB" or "#AARRGGBB".
 Singleton {
   id: root
 
   readonly property string home: Quickshell.env("HOME") || ""
 
-  // ---------------------------------------------------------------------
-  // Palettes
-  // ---------------------------------------------------------------------
-  readonly property var palettes: ({
-    obsidian: {
-      bg: "#c70a0a0c",
-      bgSolid: "#f20a0a0c",
-      border: "#1c1f26",
-      fg: "#e6e6e6",
-      bright: "#ffffff",
-      muted: "#8b8f98",
-      hover: "#3a3f4b",
-      accent: "#ffffff",
-      accentSoft: "#ffffff",
-      critical: "#ff5f5f",
-      radius: 10,
-      fontFamily: "JetBrainsMono Nerd Font Mono",
-      fontSize: 13
-    },
-    crimson: {
-      bg: "#d908080a",
-      bgSolid: "#f208080a",
-      border: "#2a0f14",
-      fg: "#e8e8e8",
-      bright: "#ffffff",
-      muted: "#8a8a8a",
-      hover: "#5a1a22",
-      accent: "#ff2a3d",
-      accentSoft: "#ff4d5e",
-      critical: "#ff2a3d",
-      radius: 10,
-      fontFamily: "JetBrainsMono Nerd Font Mono",
-      fontSize: 13
-    },
-    aether: {
-      bg: "#a6141820",
-      bgSolid: "#f2141820",
-      border: "#2a3444",
-      fg: "#eaf2ff",
-      bright: "#ffffff",
-      muted: "#9aa6b2",
-      hover: "#3b4b6b",
-      accent: "#7aa2f7",
-      accentSoft: "#a6c8ff",
-      critical: "#ff6b6b",
-      radius: 12,
-      fontFamily: "JetBrainsMono Nerd Font Mono",
-      fontSize: 13
-    },
-    ember: {
-      bg: "#d1140e08",
-      bgSolid: "#f2140e08",
-      border: "#3a2a18",
-      fg: "#e6d3b3",
-      bright: "#e0af68",
-      muted: "#a89984",
-      hover: "#5a4025",
-      accent: "#e0af68",
-      accentSoft: "#e0af68",
-      critical: "#fb4934",
-      radius: 10,
-      fontFamily: "JetBrainsMono Nerd Font Mono",
-      fontSize: 13
-    },
-    drift: {
-      bg: "#9912141a",
-      bgSolid: "#f212141a",
-      border: "#2a2f3a",
-      fg: "#d6dbe3",
-      bright: "#c792ea",
-      muted: "#8f96a3",
-      hover: "#7aa2a9",
-      accent: "#7aa2a9",
-      accentSoft: "#c792ea",
-      critical: "#ff6b6b",
-      radius: 12,
-      fontFamily: "JetBrainsMono Nerd Font Mono",
-      fontSize: 13
-    }
+  // Emergency floor if generation failed or matugen is missing.
+  // Not a selectable theme.
+  readonly property var fallback: ({
+    bg: "#c70a0a0c",
+    bgSolid: "#f20a0a0c",
+    border: "#1c1f26",
+    fg: "#e6e6e6",
+    bright: "#ffffff",
+    muted: "#8b8f98",
+    hover: "#3a3f4b",
+    accent: "#ffffff",
+    accentSoft: "#8b8f98",
+    critical: "#ff5f5f",
+    radius: 10,
+    fontFamily: "JetBrainsMono Nerd Font Mono",
+    fontSize: 13
   })
 
   // ---------------------------------------------------------------------
-  // Current theme (from ~/.cache/theme_state)
+  // Generated palette (from ~/.cache/autotheme.json)
   // ---------------------------------------------------------------------
-  property string stateText: ""
+  property string autoText: ""
 
   FileView {
-    id: stateFile
-    path: root.home + "/.cache/theme_state"
+    id: autoFile
+    path: root.home + "/.cache/autotheme.json"
     blockLoading: true
     watchChanges: true
     onFileChanged: reload()
-    onLoaded: root.stateText = text()
+    onLoaded: root.autoText = text()
 
-    Component.onCompleted: root.stateText = text()
+    Component.onCompleted: root.autoText = text()
   }
 
-  readonly property string current: palettes[(stateText || "").trim()] !== undefined
-    ? (stateText || "").trim()
-    : "obsidian"
+  readonly property var filePalette: {
+    try {
+      const o = JSON.parse(autoText || "null");
+      if (o && o.bg && o.accent)
+        return o;
+    } catch (e) {}
+    return null;
+  }
 
-  readonly property var palette: palettes[current]
+  readonly property var palette: filePalette || fallback
 
   // ---------------------------------------------------------------------
   // Animated palette blending
   //
-  // A theme switch cross-fades every color in the shell (bar, launcher,
+  // A wallpaper switch cross-fades every color in the shell (bar, launcher,
   // control centre, OSD, …) from the previous palette to the new one,
   // mirroring the awww wipe on the wallpaper instead of snapping.
   // ---------------------------------------------------------------------
   property real blend: 1
-  property var fromPalette: palettes[current]
-  property var toPalette: palettes[current]
+  property var fromPalette: palette
+  property var toPalette: palette
 
   function paletteColor(key) {
     if (blend >= 1 || !fromPalette)
@@ -186,14 +129,14 @@ Singleton {
   }
 
   Component.onCompleted: {
-    toPalette = palettes[current];
+    toPalette = palette;
     fromPalette = toPalette;
     blend = 1;
   }
 
-  onCurrentChanged: {
+  onPaletteChanged: {
     fromPalette = toPalette;
-    toPalette = palettes[current];
+    toPalette = palette;
     blend = 0;
     blendAnimation.restart();
   }
@@ -208,9 +151,9 @@ Singleton {
   readonly property color accent: paletteColor("accent")
   readonly property color accentSoft: paletteColor("accentSoft")
   readonly property color critical: paletteColor("critical")
-  readonly property int radius: palette.radius
-  readonly property string fontFamily: palette.fontFamily
-  readonly property int fontSize: palette.fontSize
+  readonly property int radius: palette.radius !== undefined ? palette.radius : 10
+  readonly property string fontFamily: palette.fontFamily !== undefined ? palette.fontFamily : "JetBrainsMono Nerd Font Mono"
+  readonly property int fontSize: palette.fontSize !== undefined ? palette.fontSize : 13
 
   // ---------------------------------------------------------------------
   // Bar geometry (mirrors the Waybar base config)
@@ -223,39 +166,13 @@ Singleton {
   readonly property int islandMargin: 10
 
   // ---------------------------------------------------------------------
-  // themes.json (theme list + wallpapers)
-  // ---------------------------------------------------------------------
-  property string themesText: ""
-
-  FileView {
-    id: themesFile
-    path: root.home + "/.config/hypr/themes/themes.json"
-    blockLoading: true
-    watchChanges: true
-    onFileChanged: reload()
-    onLoaded: root.themesText = text()
-
-    Component.onCompleted: root.themesText = text()
-  }
-
-  readonly property var themesData: {
-    try {
-      return JSON.parse(themesText || "{}");
-    } catch (e) {
-      return {};
-    }
-  }
-
-  readonly property var themeNames: Object.keys(palettes)
-
-  // ---------------------------------------------------------------------
-  // Current wallpaper (from ~/.cache/wallpaper_state_<theme>)
+  // Current wallpaper (from ~/.cache/wallpaper_state)
   // ---------------------------------------------------------------------
   property string wallStateText: ""
 
   FileView {
     id: wallStateFile
-    path: root.home + "/.cache/wallpaper_state_" + root.current
+    path: root.home + "/.cache/wallpaper_state"
     blockLoading: true
     watchChanges: true
     onFileChanged: reload()
@@ -266,62 +183,42 @@ Singleton {
 
   readonly property string currentWallpaper: (wallStateText || "").trim()
 
-  function themeTags(name) {
-    const data = themesData;
-    if (data.themes && data.themes[name] && data.themes[name].tags)
-      return data.themes[name].tags;
+  // ---------------------------------------------------------------------
+  // Dynamic wallpaper listing: every image/video in the assets dir.
+  // Refreshed on demand (picker open), so newly added files appear with
+  // no restart and no registry. Entry shape:
+  // { id, name, path, isVideo, thumb }
+  // ---------------------------------------------------------------------
+  property string wallsText: "[]"
+
+  readonly property var walls: {
+    try {
+      const a = JSON.parse(wallsText || "[]");
+      if (Array.isArray(a))
+        return a;
+    } catch (e) {}
     return [];
   }
 
-  // Wallpapers whose tags intersect the theme's tags (same rule as
-  // wallpaper_switch.sh).
-  function wallpapersFor(name) {
-    const data = themesData;
-    if (!data.wallpapers)
-      return [];
-    const tags = themeTags(name);
-    const out = [];
-    for (let i = 0; i < data.wallpapers.length; i++) {
-      const w = data.wallpapers[i];
-      if (!w.tags)
-        continue;
-      for (let j = 0; j < w.tags.length; j++) {
-        if (tags.indexOf(w.tags[j]) !== -1) {
-          out.push(w);
-          break;
-        }
-      }
+  Process {
+    id: wallScanner
+    command: [root.home + "/.config/hypr/scripts/wallpaper_switch.sh", "list-json"]
+
+    stdout: StdioCollector {
+      onStreamFinished: root.wallsText = this.text
     }
-    return out;
   }
 
-  function wallpaperPath(w) {
-    return home + "/.config/hypr/themes/" + w.path;
-  }
-
-  function wallpaperName(w) {
-    const parts = String(w.path).split("/");
-    return parts[parts.length - 1];
-  }
-
-  // Middle-frame thumbnail for videos (generated per THEMES.md with ffmpeg
-  // into wallpapers/thumbs/<id>.jpg).
-  function wallpaperThumb(w) {
-    return home + "/.config/hypr/themes/wallpapers/thumbs/" + w.id + ".jpg";
+  function refreshWallpapers() {
+    wallScanner.running = true;
   }
 
   // ---------------------------------------------------------------------
-  // Actions (delegate to the existing, battle-tested Hypr scripts)
+  // Actions (delegate to the Hypr scripts)
   // ---------------------------------------------------------------------
-  function applyTheme(name) {
+  function applyWallpaper(path) {
     Quickshell.execDetached({
-      command: [home + "/.config/hypr/scripts/theme_toggle.sh", "apply", name]
-    });
-  }
-
-  function applyWallpaper(id) {
-    Quickshell.execDetached({
-      command: [home + "/.config/hypr/scripts/wallpaper_switch.sh", "apply", id]
+      command: [home + "/.config/hypr/scripts/wallpaper_switch.sh", "apply", path]
     });
   }
 

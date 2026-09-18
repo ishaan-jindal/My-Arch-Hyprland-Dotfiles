@@ -222,9 +222,8 @@ hl.bind("Print", hl.dsp.exec_cmd("hyprshot -m region -o ~/Pictures/"))
 -- Clipboard
 hl.bind(mainMod .. " + V", hl.dsp.exec_cmd("qs ipc call shell openLauncher clipboard"))
 
--- Wallpaper / theme picker (slide-down widget)
+-- Wallpaper picker (slide-down widget, auto-themes the desktop)
 hl.bind(mainMod .. " + T", hl.dsp.exec_cmd("qs ipc call shell openPicker wallpapers"))
-hl.bind(mainMod .. " + SHIFT + T", hl.dsp.exec_cmd("qs ipc call shell openPicker themes"))
 
 -- Quickshell shell control
 hl.bind(mainMod .. " + C", hl.dsp.exec_cmd("qs ipc call shell toggleCenter"))

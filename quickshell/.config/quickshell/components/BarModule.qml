@@ -13,7 +13,10 @@ Item {
   property string text: ""
   property string icon: ""
   property color color: Theme.fg
-  property color iconColor: color
+  // Icons follow the generated accent so a wallpaper switch visibly
+  // re-themes the whole bar; modules with status states set their own
+  // iconColor explicitly (muted/critical/…).
+  property color iconColor: Theme.accent
   property int iconSize: Theme.fontSize + 5
   property bool interactive: false
   property int leftPadding: Theme.widgetPadding

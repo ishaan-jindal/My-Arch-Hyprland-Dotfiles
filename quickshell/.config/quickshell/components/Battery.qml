@@ -15,6 +15,7 @@ BarModule {
   text: charging ? "" : pct + "%"
   icon: charging ? Icons.battCharging : Icons.battery[level]
   color: critical ? Theme.critical : charging ? Theme.accentSoft : Theme.fg
+  iconColor: critical ? Theme.critical : charging ? Theme.accentSoft : Theme.accent
   interactive: true
   onClicked: ShellState.openCenterSection("power")
 

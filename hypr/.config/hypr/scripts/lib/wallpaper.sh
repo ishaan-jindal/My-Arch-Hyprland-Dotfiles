@@ -1,9 +1,8 @@
 #!/bin/bash
-# Shared wallpaper helpers, sourced by theme_toggle.sh and wallpaper_switch.sh.
+# Shared wallpaper helpers, sourced by wallpaper_switch.sh and restore_wallpaper.sh.
 #
-# Keeps both entry points byte-for-byte identical so a theme switch and a
-# wallpaper switch animate the same way:
-#   - images: `awww` with a wipe transition
+# Keeps both entry points identical so a wallpaper switch always animates:
+#   - images: `awww` with a random pick of `wave` / `wipe` each time
 #   - videos: `mpvpaper` (killed/restarted, no cross-fade)
 #
 # restore_wallpaper.sh intentionally does NOT use this (instant paint on login).
@@ -21,6 +20,7 @@ set_wallpaper_file() {
         if ! pgrep -x awww-daemon >/dev/null; then
             awww-daemon & sleep 0.3
         fi
-        awww img "$full" -t wipe
+        local transitions=(wave wipe)
+        awww img "$full" -t "${transitions[RANDOM % ${#transitions[@]}]}"
     fi
 }

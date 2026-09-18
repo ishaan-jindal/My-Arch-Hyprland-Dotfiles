@@ -3,15 +3,16 @@
 Opinionated Hyprland desktop dotfiles for Arch Linux, managed with **GNU Stow**.
 
 The desktop shell is a full **Quickshell** setup — bar, launcher, session
-menu, notification daemon, control centre and OSDs — themed by
-`hypr/.config/hypr/themes/themes.json`.
+menu, notification daemon, control centre and OSDs — auto-themed from the
+current wallpaper via `matugen` (dark-only Material You).
 
 This repository includes:
 
 - Hyprland + Hyprlock configuration
 - Quickshell shell (bar, launcher, session menu, notifications, control
-  centre, OSDs) with six ported themes
-- Wallpaper and theme switcher scripts (driven from the Quickshell launcher)
+  centre, OSDs) with wallpaper-driven autotheme
+- Wallpaper switcher (`Super + T`) — the desktop palette follows the
+  wallpaper, no theme configs to maintain
 - A Neovim configuration (Lua-based)
 - An install bootstrap script for core packages
 
@@ -30,12 +31,12 @@ This repository includes:
 
 ```text
 .
-├── hypr/       # Hyprland config, scripts, themes.json, wallpapers
+├── hypr/       # Hyprland config, scripts, matugen template, wallpapers
 ├── quickshell/ # Quickshell shell (bar, launcher, session, notifications, OSD)
 ├── nvim/       # Neovim config
 ├── fish/       # Fish shell config
 ├── ghostty/    # Ghostty terminal config
-├── gtk/        # GTK seed settings (overwritten by theme_toggle.sh apply_gtk)
+├── gtk/        # GTK seed settings (overwritten by the wallpaper script)
 ├── xdg-portal/ # Portal preferences (gtk file picker + hyprland screencast)
 ├── limine/     # Boot menu theme sync scripts + assets
 ├── docs/       # Quick start, themes, keybindings, quickshell
@@ -51,8 +52,7 @@ This repository includes:
   - top bar (workspaces, clock, power profile, network, audio, CPU, memory,
     temperature, backlight, battery, system tray)
   - app launcher (apps + clipboard history)
-  - slide-down theme / wallpaper picker with live previews (palette swatches
-    and image thumbnails)
+  - slide-down wallpaper picker with live previews (image thumbnails)
   - session menu (`wlogout`-style), control centre with quick toggles
     (Wi-Fi / Bluetooth / DND / night light), system/display/power/sound
     sections, month calendar, MPRIS media, and transient notification popups
@@ -61,10 +61,10 @@ This repository includes:
   - notification popups
   - volume/brightness/mic OSDs
   - `Super + K` keybind cheatsheet
-- **Theme switching UI** via the Quickshell picker (`theme_toggle.sh apply`)
-- **Wallpaper switching UI** for the active theme (`wallpaper_switch.sh apply`)
-- **Theme persistence** across switches using cache files in `~/.cache`
-- **Live re-theming**: the shell watches `~/.cache/theme_state`
+- **Autotheme**: picking a wallpaper regenerates the shell palette from it
+  (`matugen`, dark-only) — drop a file in the assets dir and it just works
+- **Theme persistence** across reboots using cache files in `~/.cache`
+- **Live re-theming**: the shell watches `~/.cache/autotheme.json`
 - **Night light toggle** via `hyprsunset`
 
 ---
@@ -77,8 +77,7 @@ After setup and stowing:
 - `Super + L` → session menu (lock / logout / …)
 - `Super + C` → control centre
 - `Super + V` → clipboard history
-- `Super + T` → choose wallpaper for current theme
-- `Super + Shift + T` → choose desktop theme
+- `Super + T` → wallpaper picker (desktop re-themes itself from the pick)
 - `Super + K` → show all keybinds
 - `Super + N` → toggle night light
 

@@ -1,68 +1,61 @@
 #!/usr/bin/env python3
-"""Approximate 1920x1080 Limine menu mockup for previewing a theme.
+"""Approximate 1920x1080 Limine menu mockup for previewing the autotheme.
 
 This is a development tool: it renders the packed Limine font at the same
 scale Limine will use (8x16 @ 2x2) over a wallpaper with the same translucent
 background, so we can sanity-check contrast before rebooting.
 
+The palette comes from ~/.cache/autotheme.json (same mapping as
+limine-deploy); --bg/--fg/--muted/--accent override individual roles.
+
 Usage:
-  preview-menu.py --theme obsidian --wallpaper w1.jpg --font font.f16 --out preview.png
+  preview-menu.py --wallpaper w1.jpg --font font.f16 --out preview.png
 """
 
 import argparse
+import json
 import os
 from PIL import Image
 
-PALETTES = {
-    "obsidian": dict(
-        bg="0a0a0c",
-        fg="e6e6e6",
-        muted="8b8f98",
-        sel_bg="3a3f4b",
-        sel_fg="ffffff",
-        accent="ffffff",
-    ),
-    "crimson": dict(
-        bg="08080a",
-        fg="e8e8e8",
-        muted="8a8a8a",
-        sel_bg="ff2a3d",
-        sel_fg="ffffff",
-        accent="ff2a3d",
-    ),
-    "aether": dict(
-        bg="141820",
-        fg="eaf2ff",
-        muted="9aa6b2",
-        sel_bg="7aa2f7",
-        sel_fg="ffffff",
-        accent="7aa2f7",
-    ),
-    "ember": dict(
-        bg="140e08",
-        fg="e6d3b3",
-        muted="a89984",
-        sel_bg="e0af68",
-        sel_fg="140e08",
-        accent="e0af68",
-    ),
-    "drift": dict(
-        bg="12141a",
-        fg="d6dbe3",
-        muted="8f96a3",
-        sel_bg="c792ea",
-        sel_fg="12141a",
-        accent="7aa2a9",
-    ),
-    "windows": dict(
-        bg="202226",
-        fg="e6e6e6",
-        muted="b3b3b3",
-        sel_bg="283f4d",
-        sel_fg="e6e6e6",
-        accent="4cc2ff",
-    ),
-}
+FALLBACK = dict(
+    bg="0a0a0c",
+    fg="e6e6e6",
+    muted="8b8f98",
+    sel_bg="3a3f4b",
+    sel_fg="ffffff",
+    accent="ffffff",
+)
+
+
+def strip(hexcode):
+    h = hexcode.lstrip("#")
+    if len(h) == 8:
+        h = h[2:]
+    if len(h) != 6:
+        raise ValueError(hexcode)
+    return h.lower()
+
+
+def dark_text_reads_better(rrggbb):
+    r, g, b = (int(rrggbb[i : i + 2], 16) for i in (0, 2, 4))
+    return (299 * r + 587 * g + 114 * b) > 600 * 255
+
+
+def palette_from_autotheme(path):
+    pal = dict(FALLBACK)
+    try:
+        with open(path) as f:
+            data = json.load(f)
+        pal["bg"] = strip(data["bgSolid"])
+        pal["fg"] = strip(data["fg"])
+        pal["muted"] = strip(data["muted"])
+        pal["accent"] = strip(data["accent"])
+        pal["sel_bg"] = pal["accent"]
+        pal["sel_fg"] = pal["bg"] if dark_text_reads_better(pal["accent"]) else "ffffff"
+    except (OSError, ValueError, KeyError) as e:
+        print(f"warning: {path}: {e}, using fallback palette")
+    return pal
+
 
 SCALE = 2  # term_font_scale: 2x2
 MARGIN = 48
@@ -100,13 +93,21 @@ def draw_text(img, fontdata, text, x, y, color):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--theme", default="obsidian")
+    ap.add_argument(
+        "--autotheme", default=os.path.expanduser("~/.cache/autotheme.json")
+    )
     ap.add_argument("--wallpaper", required=True)
     ap.add_argument("--font", required=True)
     ap.add_argument("--out", required=True)
+    for role in ("bg", "fg", "muted", "sel_bg", "sel_fg", "accent"):
+        ap.add_argument("--" + role, default=None)
     args = ap.parse_args()
 
-    pal = PALETTES.get(args.theme, PALETTES["obsidian"])
+    pal = palette_from_autotheme(args.autotheme)
+    for role in ("bg", "fg", "muted", "sel_bg", "sel_fg", "accent"):
+        override = getattr(args, role)
+        if override:
+            pal[role] = strip(override)
     fontdata = open(args.font, "rb").read()
 
     # wallpaper, cover-cropped

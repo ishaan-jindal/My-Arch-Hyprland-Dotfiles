@@ -1,100 +1,69 @@
-# Themes and Wallpaper Workflow
+# Autotheme and Wallpaper Workflow
 
-The desktop theme system is handled by:
+There are no themes to configure. The palette is generated from the current
+wallpaper, every time, automatically:
 
-- `hypr/.config/hypr/themes/themes.json` (single source of truth)
-- `hypr/.config/hypr/scripts/theme_toggle.sh apply <theme>`
-- `hypr/.config/hypr/scripts/wallpaper_switch.sh apply <wallpaper-id>`
+- `hypr/.config/hypr/scripts/wallpaper_switch.sh apply <file>`
+- `hypr/.config/hypr/scripts/lib/autotheme.sh` (shared helpers)
+- `hypr/.config/hypr/scripts/templates/autotheme.json` (matugen template)
+- `~/.cache/autotheme.json` (generated output, watched live by Quickshell)
 
-The Quickshell shell renders the themes itself: `Theme.qml` reads
-`themes.json` plus `~/.cache/theme_state` and re-colors the bar, launcher,
-control centre, session menu, notifications and OSDs live.
+## How it works
 
-## Available themes
+`Super + T` opens the wallpaper picker, which lists **every** image/video in
+`hypr/.config/hypr/themes/wallpapers/assets/` (live scan, sorted by name).
+Selecting one runs `wallpaper_switch.sh apply <path>`, which:
 
-| Theme | Look | GTK theme | Accent |
-| ----- | ---- | --------- | ------ |
-| obsidian | minimal monochrome | `Orchis-Dark` | white |
-| crimson | sharp red | `Orchis-Dark` | `#ff2a3d` |
-| aether | clean blue / glassy | `adw-gtk3-dark` | `#7aa2f7` |
-| ember | warm gruvbox | `Dracula` | `#e0af68` |
-| drift | ambient pastel | `adw-gtk3-dark` | `#7aa2a9` / `#c792ea` |
+1. Paints the wallpaper via `awww` (images, random `wave`/`wipe`
+   transition each time) or `mpvpaper` (videos).
+2. Updates `~/.config/hypr/themes/wallpapers/current` and
+   `~/.cache/wallpaper_state` (single file, just a path).
+3. Runs `matugen image <file> --mode dark` once through an isolated temp
+   config (your own `~/.config/matugen/config.toml`, if any, is never
+   touched and matugen never sets the wallpaper itself). Videos are sampled
+   via a middle frame extracted with `ffmpeg`. Cost is one ~200-400 ms run
+   per switch; nothing runs in the background afterwards.
+4. Writes `~/.cache/autotheme.json` — `bg/bgSolid/border/fg/bright/muted/
+   hover/accent/accentSoft/critical` mapped from the Material You dark
+   palette (`accent` = primary, `accentSoft` = tertiary for a second hue),
+   `radius`/`fontFamily`/`fontSize` fixed. Grayscale images skip matugen
+   (it would fall back to hardcoded blue) and get a neutral monochrome
+   theme instead. If matugen is missing or fails, a static dark fallback
+   is written so the shell never breaks.
+5. Syncs the fixed dark GTK furniture (`Orchis-Dark`, `Papirus-Dark`,
+   `Bibata-Modern-Classic`, `prefer-dark`) and the Limine boot menu (best
+   effort, needs the sudoers rule). Note: the root-owned copy must match
+   the repo — after pulling a `limine-deploy` change, reinstall it:
 
-All themes use `Papirus-Dark` icons, `Bibata-Modern-Classic` cursor,
-`prefer-dark` color scheme and the JetBrainsMono Nerd Font.
+   ```bash
+   sudo install -m755 ~/dotfiles/limine/scripts/limine-deploy /usr/local/bin/limine-deploy
+   sudo /usr/local/bin/limine-deploy
+   ```
 
-The palettes live in `quickshell/.config/quickshell/Theme.qml`
-(`palettes` object) — they were ported 1:1 from the old per-theme Waybar
-stylesheets, which have since been removed.
-
-## How theme switching works
-
-`Super + Shift + T` opens the Quickshell launcher on the **Themes** page.
-Selecting a theme runs `theme_toggle.sh apply <theme>`, which:
-
-1. Applies the theme's wallpaper (last used for that theme, else the first
-   wallpaper tagged for it) via `awww` (images) or `mpvpaper` (videos).
-2. Updates `~/.config/hypr/themes/wallpapers/current`.
-3. Syncs GTK: `gtk-3.0/settings.ini`, `gtk-4.0/settings.ini` and
-   `gsettings` (theme, icons, cursor, font, color-scheme).
-4. Writes `~/.cache/theme_state` and `~/.cache/wallpaper_state_<theme>`.
-5. Syncs the Limine boot menu (best effort, needs the sudoers rule).
-
-The Quickshell shell watches `~/.cache/theme_state`, so the bar and every
+The Quickshell shell watches `~/.cache/autotheme.json`, so the bar and every
 popup re-theme live — no restart, no manual reload. Color changes
-**cross-fade** (320 ms, `Theme.qml` palette blending), and the wallpaper is
-applied with the same `awww -t wipe` transition as the wallpaper picker
-(both scripts share `hypr/scripts/lib/wallpaper.sh`). The GTK file
-picker picks the theme up via `xdg-desktop-portal-gtk` + `portals.conf`
-(`FileChooser=gtk`) on next open.
+**cross-fade** (320 ms, `Theme.qml` palette blending). Re-selecting the same
+wallpaper skips the matugen run when the generated file is still valid.
+
+## Adding a wallpaper
+
+Drop the file into `hypr/.config/hypr/themes/wallpapers/assets/`. That is
+all — it appears in the picker on next open. Accepted formats: `.jpg`,
+`.jpeg`, `.png` (via `awww`), `.mp4` (via `mpvpaper`).
+
+Video thumbnails (`wallpapers/thumbs/<name>.jpg`, middle frame at 512px)
+generate automatically on first apply; `thumbs/` is a gitignored cache.
+`wallpaper_switch.sh ensure-thumbs` backfills them all at once.
 
 ## State files
 
-- `~/.cache/theme_state` — active theme name (read by Quickshell)
-- `~/.cache/wallpaper_state_<theme>` — last wallpaper per theme
+- `~/.cache/wallpaper_state` — absolute path of the current wallpaper
+- `~/.cache/autotheme.json` — generated dark palette (read by Quickshell
+  and `limine-deploy`)
 
-## Wallpaper switching
+The script is CLI-friendly too:
 
-`Super + T` opens the Quickshell launcher on the **Wallpapers** page, listing
-wallpapers for the **current** theme only.
-
-- Matching: `wallpapers[].tags` intersects `themes.<name>.tags` in `themes.json`
-- Formats: `.jpg`, `.jpeg`, `.png` (via `awww`), `.mp4` (via `mpvpaper`)
-- Selection runs `wallpaper_switch.sh apply <id>` and updates the state files
-
-Both scripts are CLI-only now (`apply <arg>`); the pickers live in
-Quickshell. Running them without arguments prints usage.
-
-## Adding a new theme
-
-1. Add the palette to `Theme.qml` (`palettes` object) — copy an existing
-   entry and adjust `bg`/`border`/`fg`/`muted`/`hover`/`accent`/
-   `accentSoft`/`critical`, `radius`, `fontFamily`, `fontSize`.
-   Colors are `#AARRGGBB` strings (alpha first).
-2. Add wallpapers under `hypr/.config/hypr/themes/wallpapers/assets/` with
-   `tags` containing the new theme name. Tag by content and mood against the
-   theme tag pools (`obsidian/dark/minimal`, `crimson/red/dark`,
-   `aether/light/blue/clean`, `ember/warm/gold`, `drift/calm/ambient`) —
-   a wallpaper matches every theme sharing at least one tag.
-   For `.mp4` wallpapers also generate the picker thumbnail (middle frame,
-   512px wide) so videos preview instead of showing a play placeholder:
-
-   ```bash
-   dur=$(ffprobe -v error -show_entries format=duration \
-     -of default=noprint_wrappers=1:nokey=1 file.mp4)
-   ffmpeg -y -ss $(python3 -c "print($dur/2)") -i file.mp4 -frames:v 1 \
-     -vf scale=512:-1 -q:v 3 \
-     hypr/.config/hypr/themes/wallpapers/thumbs/<id>.jpg
-   ```
-3. Add the theme to `hypr/.config/hypr/themes/themes.json`:
-
-```json
-"mytheme": {
-  "tags": ["mytheme", "dark"],
-  "components": { "gtk": "mytheme", "icon": "mytheme" }
-}
+```bash
+~/.config/hypr/scripts/wallpaper_switch.sh apply ~/Pictures/mine.png
+~/.config/hypr/scripts/wallpaper_switch.sh list-json | jq '.[].name'
 ```
-
-plus `components.gtk.mytheme` / `components.icon.mytheme` entries.
-
-No symlinks, no per-app stylesheets: the palette is the theme.

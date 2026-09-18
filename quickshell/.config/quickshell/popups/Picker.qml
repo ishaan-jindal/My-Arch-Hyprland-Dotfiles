@@ -3,12 +3,12 @@ import Quickshell
 import Quickshell.Wayland
 import ".."
 
-// Slide-down theme / wallpaper picker (Super + Shift + T / Super + T).
+// Slide-down wallpaper picker (Super + T).
 //
-// A centred card that slides out from under the bar, with live previews:
-//   - themes: palette swatches rendered in the theme's own colors
-//   - wallpapers: image thumbnails (videos show their middle-frame thumb
-//     with a play fallback)
+// A centred card that slides out from under the bar. The model is a live
+// scan of the wallpaper assets dir (`wallpaper_switch.sh list-json`), so
+// newly added files appear with no restart and no registry. Selecting one
+// applies it and regenerates the desktop palette from it (matugen, dark).
 PanelWindow {
   id: picker
 
@@ -24,48 +24,57 @@ PanelWindow {
   WlrLayershell.layer: WlrLayer.Overlay
   WlrLayershell.keyboardFocus: ShellState.pickerOpen ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
 
-  readonly property bool wallpapers: ShellState.pickerTab === "wallpapers"
-
   // exposed for diagnostics / tests
-  readonly property bool themeGridFocus: themeGrid.activeFocus
   readonly property bool wallpaperGridFocus: wallpaperGrid.activeFocus
-  readonly property int pickerIndex: wallpapers ? wallpaperGrid.currentIndex : themeGrid.currentIndex
-  readonly property int pickerCount: wallpapers ? wallpaperGrid.count : themeGrid.count
+  readonly property int pickerIndex: wallpaperGrid.currentIndex
+  readonly property int pickerCount: wallpaperGrid.count
 
   function close() {
     ShellState.pickerOpen = false;
   }
 
-  function activateTheme() {
-    const names = Theme.themeNames;
-    if (themeGrid.currentIndex >= 0 && themeGrid.currentIndex < names.length) {
-      Theme.applyTheme(names[themeGrid.currentIndex]);
+  function activateWallpaper() {
+    const walls = filteredWalls;
+    if (wallpaperGrid.currentIndex >= 0 && wallpaperGrid.currentIndex < walls.length) {
+      Theme.applyWallpaper(walls[wallpaperGrid.currentIndex].path);
       close();
     }
   }
 
-  function activateWallpaper() {
-    const walls = Theme.wallpapersFor(Theme.current);
-    if (wallpaperGrid.currentIndex >= 0 && wallpaperGrid.currentIndex < walls.length) {
-      Theme.applyWallpaper(walls[wallpaperGrid.currentIndex].id);
-      close();
+  // Live name filter (case-insensitive substring).
+  property string query: ""
+
+  readonly property var filteredWalls: {
+    const q = query.trim().toLowerCase();
+    const walls = Theme.walls;
+    if (q === "")
+      return walls;
+    const out = [];
+    for (let i = 0; i < walls.length; i++) {
+      if (String(walls[i].name).toLowerCase().indexOf(q) !== -1)
+        out.push(walls[i]);
     }
+    return out;
   }
+
+  onQueryChanged: wallpaperGrid.currentIndex = 0
 
   onVisibleChanged: {
     if (!visible)
       return;
-    const themeIdx = Theme.themeNames.indexOf(Theme.current);
-    themeGrid.currentIndex = Math.max(0, themeIdx);
-    const walls = Theme.wallpapersFor(Theme.current);
+    query = "";
+    searchInput.text = "";
+    Theme.refreshWallpapers();
+    const walls = Theme.walls;
     let wallIdx = 0;
     for (let i = 0; i < walls.length; i++) {
-      if (Theme.wallpaperPath(walls[i]) === Theme.currentWallpaper) {
+      if (walls[i].path === Theme.currentWallpaper) {
         wallIdx = i;
         break;
       }
     }
     wallpaperGrid.currentIndex = wallIdx;
+    searchInput.forceActiveFocus();
   }
 
   // dim scrim, click outside to close
@@ -85,7 +94,7 @@ PanelWindow {
     anchors.topMargin: Theme.barMarginTop + Theme.barHeight + 8
     anchors.horizontalCenter: parent.horizontalCenter
     width: Math.min(1120, parent.width - 80)
-    height: picker.wallpapers ? 560 : 420
+    height: 560
     color: Theme.bgSolid
     border.color: Theme.border
     border.width: 1
@@ -117,11 +126,8 @@ PanelWindow {
       anchors.fill: parent
       focus: picker.visible
 
-      // NOTE: Esc/Tab are handled on the GridViews below, not here — key
-      // events from the focused grid don't reliably bubble to this scope.
-
       // ---------------------------------------------------------------
-      // Header: tabs + close
+      // Header
       // ---------------------------------------------------------------
       Item {
         id: header
@@ -134,90 +140,28 @@ PanelWindow {
         Row {
           anchors.left: parent.left
           anchors.verticalCenter: parent.verticalCenter
-          spacing: 8
+          spacing: 6
 
-          Rectangle {
-            readonly property bool active: !picker.wallpapers
-
-            width: tabThemeRow.implicitWidth + 24
-            height: 30
-            radius: Theme.radius
-            color: active ? Theme.hover : "transparent"
-            border.color: active ? Theme.accent : Theme.border
-            border.width: 1
-
-            Row {
-              id: tabThemeRow
-              anchors.centerIn: parent
-              spacing: 6
-
-              Text {
-                anchors.verticalCenter: parent.verticalCenter
-                text: Icons.palette
-                color: parent.parent.active ? Theme.accent : Theme.muted
-                font.family: Theme.fontFamily
-                font.pixelSize: 12
-              }
-
-              Text {
-                anchors.verticalCenter: parent.verticalCenter
-                text: "Themes"
-                color: parent.parent.active ? Theme.bright : Theme.muted
-                font.family: Theme.fontFamily
-                font.pixelSize: 12
-              }
-            }
-
-            MouseArea {
-              anchors.fill: parent
-              cursorShape: Qt.PointingHandCursor
-              onClicked: ShellState.pickerTab = "themes"
-            }
+          Text {
+            anchors.verticalCenter: parent.verticalCenter
+            text: Icons.image
+            color: Theme.accent
+            font.family: Theme.fontFamily
+            font.pixelSize: 12
           }
 
-          Rectangle {
-            readonly property bool active: picker.wallpapers
-
-            width: tabWallRow.implicitWidth + 24
-            height: 30
-            radius: Theme.radius
-            color: active ? Theme.hover : "transparent"
-            border.color: active ? Theme.accent : Theme.border
-            border.width: 1
-
-            Row {
-              id: tabWallRow
-              anchors.centerIn: parent
-              spacing: 6
-
-              Text {
-                anchors.verticalCenter: parent.verticalCenter
-                text: Icons.image
-                color: parent.parent.active ? Theme.accent : Theme.muted
-                font.family: Theme.fontFamily
-                font.pixelSize: 12
-              }
-
-              Text {
-                anchors.verticalCenter: parent.verticalCenter
-                text: "Wallpapers"
-                color: parent.parent.active ? Theme.bright : Theme.muted
-                font.family: Theme.fontFamily
-                font.pixelSize: 12
-              }
-            }
-
-            MouseArea {
-              anchors.fill: parent
-              cursorShape: Qt.PointingHandCursor
-              onClicked: ShellState.pickerTab = "wallpapers"
-            }
+          Text {
+            anchors.verticalCenter: parent.verticalCenter
+            text: "Wallpapers"
+            color: Theme.bright
+            font.family: Theme.fontFamily
+            font.pixelSize: 12
           }
         }
 
         Text {
           anchors.centerIn: parent
-          text: picker.wallpapers ? ("Wallpapers for " + Theme.current) : "Desktop theme"
+          text: filteredWalls.length + " / " + Theme.walls.length + " wallpapers · theme follows wallpaper"
           color: Theme.muted
           font.family: Theme.fontFamily
           font.pixelSize: 11
@@ -245,139 +189,109 @@ PanelWindow {
       }
 
       // ---------------------------------------------------------------
-      // Themes grid
+      // Search (filters by filename, case-insensitive)
       // ---------------------------------------------------------------
-      GridView {
-        id: themeGrid
-        visible: !picker.wallpapers
-        focus: picker.visible && !picker.wallpapers
-        keyNavigationWraps: true
-        Keys.onReturnPressed: picker.activateTheme()
-        Keys.onEnterPressed: picker.activateTheme()
-        Keys.onSpacePressed: picker.activateTheme()
-        Keys.onEscapePressed: picker.close()
-        Keys.onTabPressed: ShellState.pickerTab = "wallpapers"
+      Item {
+        id: searchBox
         anchors.top: header.bottom
         anchors.topMargin: 6
         anchors.left: parent.left
         anchors.right: parent.right
-        anchors.bottom: parent.bottom
         anchors.leftMargin: 16
         anchors.rightMargin: 16
-        anchors.bottomMargin: 16
-        clip: true
-        cellWidth: Math.floor(width / 3)
-        cellHeight: 128
-        model: Theme.themeNames
+        height: 34
 
-        delegate: Rectangle {
-          id: themeCard
-          required property string modelData
-
-          readonly property var pal: Theme.palettes[modelData]
-          readonly property bool isCurrent: modelData === Theme.current
-
-          width: themeGrid.cellWidth - 12
-          height: themeGrid.cellHeight - 12
+        Rectangle {
+          anchors.fill: parent
           radius: Theme.radius
-          color: pal.bgSolid
-          border.width: isCurrent ? 2 : 1
-          border.color: GridView.isCurrentItem ? Theme.accent : isCurrent ? Theme.accent : Theme.border
+          color: Theme.bg
+          border.color: searchInput.activeFocus ? Theme.accent : Theme.border
+          border.width: 1
 
-          Column {
-            anchors.fill: parent
-            anchors.margins: 12
-            spacing: 8
-
-            Row {
-              spacing: 8
-
-              Text {
-                text: themeCard.modelData
-                color: themeCard.pal.bright
-                font.family: Theme.fontFamily
-                font.pixelSize: 14
-                font.bold: true
-              }
-
-              Rectangle {
-                visible: themeCard.isCurrent
-                anchors.verticalCenter: parent.verticalCenter
-                width: badge.implicitWidth + 12
-                height: 18
-                radius: 4
-                color: "transparent"
-                border.color: themeCard.pal.accent
-                border.width: 1
-
-                Text {
-                  id: badge
-                  anchors.centerIn: parent
-                  text: "current"
-                  color: themeCard.pal.accent
-                  font.family: Theme.fontFamily
-                  font.pixelSize: 9
-                }
-              }
-            }
-
-            Row {
-              spacing: 6
-
-              Repeater {
-                model: [
-                  themeCard.pal.bg, themeCard.pal.fg, themeCard.pal.accent,
-                  themeCard.pal.accentSoft, themeCard.pal.critical
-                ]
-
-                delegate: Rectangle {
-                  required property var modelData
-
-                  width: 22
-                  height: 22
-                  radius: 5
-                  color: modelData
-                  border.color: themeCard.pal.border
-                  border.width: 1
-                }
-              }
-            }
-
-            Text {
-              width: parent.width
-              text: Theme.themeTags(themeCard.modelData).join(" · ")
-              color: themeCard.pal.muted
-              font.family: Theme.fontFamily
-              font.pixelSize: 11
-              elide: Text.ElideRight
-            }
+          Text {
+            anchors.left: parent.left
+            anchors.leftMargin: 12
+            anchors.verticalCenter: parent.verticalCenter
+            text: Icons.search
+            color: Theme.muted
+            font.family: Theme.fontFamily
+            font.pixelSize: 12
           }
 
-          MouseArea {
-            anchors.fill: parent
-            cursorShape: Qt.PointingHandCursor
-            onClicked: {
-              Theme.applyTheme(themeCard.modelData);
-              picker.close();
+          TextInput {
+            id: searchInput
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.leftMargin: 34
+            anchors.rightMargin: 12
+            anchors.verticalCenter: parent.verticalCenter
+            onTextChanged: picker.query = text
+            color: Theme.fg
+            selectionColor: Theme.accent
+            selectedTextColor: Theme.bgSolid
+            font.family: Theme.fontFamily
+            font.pixelSize: 12
+            clip: true
+
+            Text {
+              anchors.fill: parent
+              visible: parent.displayText === ""
+              text: "Search wallpapers…"
+              color: Theme.muted
+              font.family: Theme.fontFamily
+              font.pixelSize: 12
+              verticalAlignment: Text.AlignVCenter
+            }
+
+            Keys.onDownPressed: {
+              if (filteredWalls.length > 0)
+                wallpaperGrid.forceActiveFocus();
+            }
+            Keys.onReturnPressed: picker.activateWallpaper()
+            Keys.onEnterPressed: picker.activateWallpaper()
+            Keys.onEscapePressed: {
+              if (searchInput.displayText !== "")
+                searchInput.text = "";
+              else
+                picker.close();
             }
           }
         }
       }
 
       // ---------------------------------------------------------------
-      // Wallpapers grid (current theme's tagged wallpapers)
+      // Empty state
+      // ---------------------------------------------------------------
+      Text {
+        visible: filteredWalls.length === 0
+        anchors.top: searchBox.bottom
+        anchors.topMargin: 40
+        anchors.horizontalCenter: parent.horizontalCenter
+        text: "No wallpapers match \"" + query + "\""
+        color: Theme.muted
+        font.family: Theme.fontFamily
+        font.pixelSize: 12
+      }
+
+      // ---------------------------------------------------------------
+      // Wallpapers grid (live scan of the assets dir)
       // ---------------------------------------------------------------
       GridView {
         id: wallpaperGrid
-        visible: picker.wallpapers
-        focus: picker.visible && picker.wallpapers
+        focus: false
         keyNavigationWraps: true
         Keys.onReturnPressed: picker.activateWallpaper()
         Keys.onEnterPressed: picker.activateWallpaper()
         Keys.onSpacePressed: picker.activateWallpaper()
         Keys.onEscapePressed: picker.close()
-        Keys.onTabPressed: ShellState.pickerTab = "themes"
-        anchors.top: header.bottom
+        Keys.onUpPressed: (event) => {
+          const cols = Math.max(1, Math.floor(wallpaperGrid.width / wallpaperGrid.cellWidth));
+          if (wallpaperGrid.currentIndex < cols) {
+            searchInput.forceActiveFocus();
+            event.accepted = true;
+          }
+        }
+        anchors.top: searchBox.bottom
         anchors.topMargin: 6
         anchors.left: parent.left
         anchors.right: parent.right
@@ -388,14 +302,15 @@ PanelWindow {
         clip: true
         cellWidth: Math.floor(width / 4)
         cellHeight: 172
-        model: Theme.wallpapersFor(Theme.current)
+        model: filteredWalls
 
         delegate: Rectangle {
           id: wallCard
           required property var modelData
 
-          readonly property string abs: Theme.wallpaperPath(modelData)
-          readonly property bool isVideo: /\.mp4$/i.test(modelData.path)
+          readonly property string abs: modelData.path
+          readonly property bool isVideo: modelData.isVideo === true
+          readonly property string thumb: modelData.thumb || ""
           readonly property bool isCurrent: abs === Theme.currentWallpaper
 
           width: wallpaperGrid.cellWidth - 12
@@ -436,7 +351,7 @@ PanelWindow {
             Image {
               id: thumbImg
               anchors.fill: parent
-              source: "file://" + Theme.wallpaperThumb(wallCard.modelData)
+              source: wallCard.thumb !== "" ? "file://" + wallCard.thumb : ""
               sourceSize.width: 512
               sourceSize.height: 256
               fillMode: Image.PreserveAspectCrop
@@ -445,38 +360,23 @@ PanelWindow {
             }
           }
 
-          Column {
+          Text {
             anchors.left: parent.left
             anchors.right: parent.right
             anchors.bottom: parent.bottom
             anchors.margins: 8
-            spacing: 0
-
-            Text {
-              width: parent.width
-              text: Theme.wallpaperName(wallCard.modelData)
-              color: wallCard.isCurrent ? Theme.accent : Theme.fg
-              font.family: Theme.fontFamily
-              font.pixelSize: 10
-              elide: Text.ElideMiddle
-            }
-
-            Text {
-              width: parent.width
-              visible: (wallCard.modelData.tags || []).length > 0
-              text: (wallCard.modelData.tags || []).join(", ")
-              color: Theme.muted
-              font.family: Theme.fontFamily
-              font.pixelSize: 9
-              elide: Text.ElideRight
-            }
+            text: modelData.name
+            color: wallCard.isCurrent ? Theme.accent : Theme.fg
+            font.family: Theme.fontFamily
+            font.pixelSize: 10
+            elide: Text.ElideMiddle
           }
 
           MouseArea {
             anchors.fill: parent
             cursorShape: Qt.PointingHandCursor
             onClicked: {
-              Theme.applyWallpaper(wallCard.modelData.id);
+              Theme.applyWallpaper(wallCard.modelData.path);
               picker.close();
             }
           }

@@ -1,2 +1,4 @@
-# Current wallpaper pointer (created by the theme/wallpaper/restore scripts).
+# Current wallpaper pointer (created by the wallpaper/restore scripts).
 hypr/.config/hypr/themes/wallpapers/current
+# Video thumbnails (generated cache for the wallpaper picker).
+hypr/.config/hypr/themes/wallpapers/thumbs/

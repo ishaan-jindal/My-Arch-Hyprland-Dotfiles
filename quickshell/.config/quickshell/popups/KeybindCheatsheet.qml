@@ -35,8 +35,7 @@ PanelWindow {
       binds: [
         { keys: "SUPER + C", desc: "Control centre (audio/media/notifs)" },
         { keys: "SUPER + V", desc: "Clipboard history" },
-        { keys: "SUPER + T", desc: "Wallpaper picker (current theme)" },
-        { keys: "SUPER + SHIFT + T", desc: "Theme picker" },
+        { keys: "SUPER + T", desc: "Wallpaper picker (theme follows wallpaper)" },
         { keys: "SUPER + K", desc: "This cheatsheet" },
         { keys: "SUPER + L", desc: "Session menu" },
         { keys: "SUPER + SHIFT + K", desc: "Stop Quickshell" },

@@ -30,7 +30,7 @@ Singleton {
   property string centerSection: "" // system | display | power | audio | calendar — deep-link target
   property bool cheatsheetOpen: false
   property bool pickerOpen: false
-  property string pickerTab: "themes" // themes | wallpapers
+  property string pickerTab: "wallpapers" // wallpapers only; kept for IPC compat
 
   function closeAllPopups() {
     launcherOpen = false;
@@ -42,19 +42,15 @@ Singleton {
     centerView = "main";
   }
 
-  // Theme/wallpaper switching lives in its own slide-down picker, so route
-  // those pages there (legacy callers keep working).
+  // Wallpaper picker (slide-down). `tab` is accepted for IPC compat and
+  // ignored — there is only the wallpapers view; the theme follows the
+  // wallpaper automatically.
   function togglePicker(tab) {
-    const wantTab = (tab === "wallpapers") ? "wallpapers" : "themes";
     if (pickerOpen) {
-      if (pickerTab !== wantTab) {
-        pickerTab = wantTab;
-        return;
-      }
       pickerOpen = false;
       return;
     }
-    pickerTab = wantTab;
+    pickerTab = "wallpapers";
     launcherOpen = false;
     sessionOpen = false;
     centerOpen = false;
@@ -62,8 +58,8 @@ Singleton {
     pickerOpen = true;
   }
 
-  // Toggle the launcher. `apps` (default) or `clipboard`; the themes and
-  // wallpapers pages live in the slide-down picker instead.
+  // Toggle the launcher. `apps` (default) or `clipboard`; the legacy
+  // themes/wallpapers pages now live in the slide-down picker instead.
   function toggleLauncher(page) {
     let wantPage = (page !== undefined && page !== "") ? page : "apps";
     if (wantPage === "themes" || wantPage === "wallpapers") {

@@ -8,6 +8,7 @@ BarModule {
   text: t + "°C"
   icon: glyph
   color: t >= 80 ? Theme.critical : Theme.fg
+  iconColor: t >= 80 ? Theme.critical : Theme.accent
   interactive: true
   onClicked: ShellState.openCenterSection("system")
 }

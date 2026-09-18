@@ -1,13 +1,21 @@
 #!/usr/bin/env bash
-# Keep the Limine boot menu in sync with the active Hyprland theme.
-# Best effort: silently does nothing if the sudoers rule is missing.
+# Keep the Limine boot menu in sync with the generated autotheme.
+# Runs automatically on every wallpaper apply through the passwordless
+# sudoers rule (/etc/sudoers.d/10-limine); failures are logged to
+# ~/.cache/limine-sync.log and surfaced once via notify-send.
 set -u
 
-if sudo -n /usr/local/bin/limine-deploy >/dev/null 2>&1; then
-    exit 0
-fi
+LOG="$HOME/.cache/limine-sync.log"
+
+# Capture locally (the log lives in $HOME, owned by the user).
+out="$(sudo -n /usr/local/bin/limine-deploy 2>&1)"
+ec=$?
+printf '%s\n' "$out" >"$LOG"
+[ "$ec" -eq 0 ] && exit 0
 
 if command -v notify-send >/dev/null 2>&1; then
-    notify-send "Limine" "Theme sync failed — run: sudo /usr/local/bin/limine-deploy" || true
+    notify-send "Limine" "Boot menu sync failed — see ~/.cache/limine-sync.log" || true
 fi
+echo "limine-sync: failed, see $LOG" >&2
+tail -n 5 "$LOG" >&2 || true
 exit 1

@@ -7,7 +7,8 @@ set -e
 # Keep this list in sync with:
 # - hypr/.config/hypr/hyprland.lua (binds: ghostty, quickshell/qs, zen-browser,
 #   nemo, hyprshot, cliphist/wl-clipboard, brightnessctl, playerctl)
-# - hypr/.config/hypr/scripts/*.sh (awww, mpvpaper, hyprsunset, jq, notify-send)
+# - hypr/.config/hypr/scripts/*.sh (awww, mpvpaper, matugen, jq, ffmpeg/ffprobe,
+#   notify-send, imagemagick for limine-deploy)
 # - quickshell/.config/quickshell (Pipewire audio, UPower battery, NetworkManager
 #   Wi-Fi panel, BlueZ Bluetooth panel, platform menu tray)
 pacman_packages=(
@@ -20,7 +21,10 @@ pacman_packages=(
     "ghostty"
     "nemo"
     "awww"
+    "matugen"
     "jq"
+    "ffmpeg"
+    "imagemagick"
     "libnotify"
     "wl-clipboard"
     "cliphist"

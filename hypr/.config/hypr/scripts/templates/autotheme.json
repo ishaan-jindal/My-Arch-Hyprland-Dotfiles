@@ -1,0 +1,18 @@
+{
+  "wallpaper": "{{image}}",
+  "mode": "dark",
+  "source": "{{colors.source_color.default.hex}}",
+  "bg": "#c7{{colors.surface.dark.hex_stripped}}",
+  "bgSolid": "#f2{{colors.surface.dark.hex_stripped}}",
+  "border": "{{colors.outline_variant.dark.hex}}",
+  "fg": "{{colors.on_surface.dark.hex}}",
+  "bright": "{{colors.primary.dark.hex}}",
+  "muted": "{{colors.on_surface_variant.dark.hex}}",
+  "hover": "{{colors.surface_container_high.dark.hex}}",
+  "accent": "{{colors.primary.dark.hex}}",
+  "accentSoft": "{{colors.tertiary.dark.hex}}",
+  "critical": "{{colors.error.dark.hex}}",
+  "radius": 10,
+  "fontFamily": "JetBrainsMono Nerd Font Mono",
+  "fontSize": 13
+}
