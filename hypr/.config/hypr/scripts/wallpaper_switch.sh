@@ -41,7 +41,7 @@ apply_wallpaper() {
     ln -s "$full" "$CURRENT_LINK"
 
     # Same file re-applied and the generated outputs are still valid: skip
-    # the one-shot matugen run, just repaint + relink.
+    # the one-shot matugen run, just repaint and relink.
     local prev=""
     [ -f "$WALL_STATE" ] && prev="$(cat "$WALL_STATE")"
     if [ "$prev" = "$full" ] && autotheme_valid && [ -f "$GHOSTTY_THEME" ]; then

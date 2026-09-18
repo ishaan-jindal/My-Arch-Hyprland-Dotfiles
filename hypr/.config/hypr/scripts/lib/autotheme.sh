@@ -26,6 +26,8 @@ GTK4_CSS="$HOME/.config/gtk-4.0/gtk.css"
 VIBRANT_PY="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/vibrant.py"
 
 # Fixed dark desktop furniture (the generated palette only themes the shell).
+
+# Fixed dark desktop furniture (the generated palette only themes the shell).
 GTK_THEME="Orchis-Dark"
 ICON_THEME="Papirus-Dark"
 CURSOR_THEME="Bibata-Modern-Classic"
@@ -153,25 +155,38 @@ set_hypr_borders() {
 # Fails if any token is left unsubstituted.
 # ----------------------
 render_template_fallback() {
-    sed -e 's|{{ colors.primary.dark.hex }}|#ffffff|g' \
-        -e 's|{{ colors.on_primary.dark.hex }}|#0a0a0c|g' \
-        -e 's|{{ colors.secondary.dark.hex }}|#8b8f98|g' \
-        -e 's|{{ colors.primary.dark.red }}|255|g' \
-        -e 's|{{ colors.primary.dark.green }}|255|g' \
-        -e 's|{{ colors.primary.dark.blue }}|255|g' \
-        -e 's|{{ colors.tertiary.dark.red }}|139|g' \
-        -e 's|{{ colors.tertiary.dark.green }}|143|g' \
-        -e 's|{{ colors.tertiary.dark.blue }}|152|g' \
-        -e 's|{{ vibrant.hex }}|#ffffff|g' \
-        -e 's|{{ vibrant_soft.hex }}|#8b8f98|g' \
-        -e 's|{{ vibrant_on.hex }}|#0a0a0c|g' \
-        -e 's|{{ vibrant.red }}|255|g' \
-        -e 's|{{ vibrant.green }}|255|g' \
-        -e 's|{{ vibrant.blue }}|255|g' \
-        -e 's|{{ vibrant_soft.red }}|139|g' \
-        -e 's|{{ vibrant_soft.green }}|143|g' \
-        -e 's|{{ vibrant_soft.blue }}|152|g' \
-        "$1" > "$2" || return 1
+    local args=(
+        -e 's|{{image}}||g'
+        -e 's|{{ image }}||g'
+        -e 's|{{ colors.primary.dark.hex }}|#ffffff|g'
+        -e 's|{{ colors.on_primary.dark.hex }}|#0a0a0c|g'
+        -e 's|{{ colors.secondary.dark.hex }}|#8b8f98|g'
+        -e 's|{{ colors.surface.dark.hex }}|#0a0a0c|g'
+        -e 's|{{ colors.on_surface.dark.hex }}|#e6e6e6|g'
+        -e 's|{{ colors.primary.dark.red }}|255|g'
+        -e 's|{{ colors.primary.dark.green }}|255|g'
+        -e 's|{{ colors.primary.dark.blue }}|255|g'
+        -e 's|{{ colors.tertiary.dark.red }}|139|g'
+        -e 's|{{ colors.tertiary.dark.green }}|143|g'
+        -e 's|{{ colors.tertiary.dark.blue }}|152|g'
+        -e 's|{{ vibrant.hex }}|#ffffff|g'
+        -e 's|{{ vibrant_soft.hex }}|#8b8f98|g'
+        -e 's|{{ vibrant_on.hex }}|#0a0a0c|g'
+        -e 's|{{ vibrant.red }}|255|g'
+        -e 's|{{ vibrant.green }}|255|g'
+        -e 's|{{ vibrant.blue }}|255|g'
+        -e 's|{{ vibrant_soft.red }}|139|g'
+        -e 's|{{ vibrant_soft.green }}|143|g'
+        -e 's|{{ vibrant_soft.blue }}|152|g'
+    )
+    # terminal palette (neutral floor, mirrors write_ghostty_theme_neutral)
+    local terms=(0a0a0c ff5f5f 8b8f98 b8bcc4 ffffff 6e737d a7adb8 e6e6e6
+        3a3f4b ff8a8a a7adb8 d4d8df ffffff 8b8f98 c2c7d1 ffffff)
+    local i
+    for i in "${!terms[@]}"; do
+        args+=(-e "s|{{ term$i.hex }}|#${terms[$i]}|g")
+    done
+    sed "${args[@]}" "$1" > "$2" || return 1
     ! grep -q '{{' "$2" 2>/dev/null
 }
 
@@ -340,7 +355,8 @@ EOF
                 --import-json "$vib" >/dev/null 2>&1 \
             && autotheme_valid && [ -f "$GHOSTTY_THEME" ] \
             && [ -f "$HYPLOCK_CONF" ] && [ -f "$GTK3_CSS" ] && [ -f "$GTK4_CSS" ] \
-            && ! grep -q '{{' "$HYPLOCK_CONF" "$GTK3_CSS" "$GTK4_CSS" "$GHOSTTY_THEME" "$AUTOTHEME_JSON" 2>/dev/null; then
+            && ! grep -q '{{' "$HYPLOCK_CONF" "$GTK3_CSS" "$GTK4_CSS" "$GHOSTTY_THEME" \
+                "$AUTOTHEME_JSON" 2>/dev/null; then
             # matugen records its actual input in {{image}} — for videos
             # that is the temp frame, so pin the real wallpaper path.
             local fixed
