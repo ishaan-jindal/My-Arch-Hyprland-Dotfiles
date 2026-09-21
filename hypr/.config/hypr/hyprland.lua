@@ -286,10 +286,10 @@ hl.window_rule({
 })
 
 hl.window_rule({
-  match  = { class = "^spotify$" },
+  match  = { class = "^(?i)spotify$" },
   float  = true,
   center = true,
-  size   = { 900, 600 },
+  size   = { 800, 600 },
 })
 
 -- Frosted glass: the compositor blurs what sits behind the Quickshell
