@@ -104,6 +104,10 @@ quickshell/.config/quickshell/
 │   ├── Bluetooth.qml         #   bluetooth status widget → bluetooth view
 │   ├── WifiPanel.qml         #   Wi-Fi view: scan/connect/PSK
 │   ├── BluetoothPanel.qml    #   Bluetooth view: scan/pair/connect/forget
+│   ├── QuickToggle.qml       #   control-centre toggle pill (cardWidth injected)
+│   ├── BarSlider.qml         #   control-centre slider with keyboard nudge
+│   ├── SectionCard.qml       #   linkable section card (contentWidth injected)
+│   ├── StatRow.qml           #   label/value/mini-bar row (system section)
 │   └── Clock/Tray/Bluetooth/NetWidget/Audio/Cpu/Memory/Temperature/Backlight/Battery.qml
 └── popups/
     ├── Launcher.qml          # apps + clipboard pages

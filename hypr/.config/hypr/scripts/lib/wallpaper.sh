@@ -13,14 +13,17 @@ set_wallpaper_file() {
 
     pkill mpvpaper >/dev/null 2>&1 || true
 
-    if [[ "$full" == *.mp4 ]]; then
-        pkill awww-daemon >/dev/null 2>&1 || true
-        mpvpaper -o "loop --no-audio --hwdec=auto --vo=gpu --profile=fast" "*" "$full" &
-    else
-        if ! pgrep -x awww-daemon >/dev/null; then
-            awww-daemon & sleep 0.3
-        fi
-        local transitions=(wave wipe)
-        awww img "$full" -t "${transitions[RANDOM % ${#transitions[@]}]}"
-    fi
+    case "${full,,}" in
+        *.mp4 | *.mkv | *.webm)
+            pkill awww-daemon >/dev/null 2>&1 || true
+            mpvpaper -o "loop --no-audio --hwdec=auto --vo=gpu --profile=fast" "*" "$full" &
+            ;;
+        *)
+            if ! pgrep -x awww-daemon >/dev/null; then
+                awww-daemon & sleep 0.3
+            fi
+            local transitions=(wave wipe)
+            awww img "$full" -t "${transitions[RANDOM % ${#transitions[@]}]}"
+            ;;
+    esac
 }

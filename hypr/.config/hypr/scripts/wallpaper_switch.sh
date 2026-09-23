@@ -14,7 +14,16 @@
 # The Quickshell wallpaper picker (Super + T) drives this script.
 set -u
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_SRC="${BASH_SOURCE[0]}"
+if command -v readlink >/dev/null 2>&1; then
+    SCRIPT_SRC="$(readlink -f "$SCRIPT_SRC")"
+fi
+SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_SRC")" && pwd)"
+# Repo checkout root (hypr/.config/hypr/scripts → up 4 levels); the
+# limine-sync path below falls back to ~/dotfiles when that fails.
+REPO_ROOT="$(cd "$SCRIPT_DIR/../../../.." 2>/dev/null && pwd || echo "$HOME/dotfiles")"
+LIMINE_SYNC="$REPO_ROOT/limine/scripts/limine-sync"
+[ -x "$LIMINE_SYNC" ] || LIMINE_SYNC="$HOME/dotfiles/limine/scripts/limine-sync"
 # shellcheck source=lib/wallpaper.sh
 . "$SCRIPT_DIR/lib/wallpaper.sh"
 # shellcheck source=lib/autotheme.sh
@@ -45,7 +54,7 @@ apply_wallpaper() {
     local prev=""
     [ -f "$WALL_STATE" ] && prev="$(cat "$WALL_STATE")"
     if [ "$prev" = "$full" ] && autotheme_valid && [ -f "$GHOSTTY_THEME" ]; then
-        "$HOME/dotfiles/limine/scripts/limine-sync" >/dev/null 2>&1 || true
+        "$LIMINE_SYNC" >/dev/null 2>&1 || true
         return 0
     fi
 
@@ -56,7 +65,7 @@ apply_wallpaper() {
     echo "$full" > "$WALL_STATE"
 
     # keep the Limine boot menu in sync (best effort; needs the sudoers rule)
-    "$HOME/dotfiles/limine/scripts/limine-sync" >/dev/null 2>&1 || true
+    "$LIMINE_SYNC" >/dev/null 2>&1 || true
 }
 
 # ----------------------
@@ -69,7 +78,8 @@ list_json() {
         return 0
     fi
     find "$ASSETS_DIR" -maxdepth 1 -type f \
-        \( -iname '*.jpg' -o -iname '*.jpeg' -o -iname '*.png' -o -iname '*.mp4' \) \
+        \( -iname '*.jpg' -o -iname '*.jpeg' -o -iname '*.png' \
+        -o -iname '*.mp4' -o -iname '*.mkv' -o -iname '*.webm' \) \
         -print0 \
     | sort -z \
     | while IFS= read -r -d '' f; do

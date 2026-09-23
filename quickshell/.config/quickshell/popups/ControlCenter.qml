@@ -96,228 +96,13 @@ PanelWindow {
     }
   }
 
-  // pill button used by the quick toggle row
-  component QuickToggle: Rectangle {
-    id: pill
-    property string icon: ""
-    property string label: ""
-    property bool on: false
-    property color tint: Theme.accent
-    signal activated()
+  // (QuickToggle lives in ../components now)
 
-    width: (ccCard.width - 32 - 3 * 8) / 4
-    height: 48
-    radius: Theme.radius
-    color: pillHover.hovered
-      ? (on ? Qt.rgba(tint.r, tint.g, tint.b, 0.30) : Qt.rgba(tint.r, tint.g, tint.b, 0.08))
-      : (on ? Qt.rgba(tint.r, tint.g, tint.b, 0.22) : "transparent")
-    border.color: activeFocus ? Theme.bright : on ? tint : Theme.border
-    border.width: 1
-    activeFocusOnTab: true
+  // (BarSlider lives in ../components now)
 
-    Behavior on color {
-      ColorAnimation { duration: Theme.hoverDuration; easing.type: Easing.OutCubic }
-    }
+  // (SectionCard lives in ../components now)
 
-    Behavior on border.color {
-      ColorAnimation { duration: Theme.hoverDuration; easing.type: Easing.OutCubic }
-    }
-
-    Behavior on scale {
-      NumberAnimation { duration: Theme.hoverDuration; easing.type: Easing.OutCubic }
-    }
-
-    scale: pillPress.pressed ? 0.97 : 1
-
-    Column {
-      anchors.centerIn: parent
-      spacing: 2
-
-      Text {
-        anchors.horizontalCenter: parent.horizontalCenter
-        text: pill.icon
-        color: pill.on || pillHover.hovered ? pill.tint : Theme.fg
-        font.family: Theme.fontFamily
-        font.pixelSize: 15
-
-        Behavior on color {
-          ColorAnimation { duration: Theme.hoverDuration; easing.type: Easing.OutCubic }
-        }
-      }
-
-      Text {
-        anchors.horizontalCenter: parent.horizontalCenter
-        text: pill.label
-        color: pill.on || pillHover.hovered ? pill.tint : Theme.muted
-        font.family: Theme.fontFamily
-        font.pixelSize: 9
-
-        Behavior on color {
-          ColorAnimation { duration: Theme.hoverDuration; easing.type: Easing.OutCubic }
-        }
-      }
-    }
-
-    Keys.onSpacePressed: pill.activated()
-    Keys.onReturnPressed: pill.activated()
-    Keys.onEnterPressed: pill.activated()
-
-    HoverHandler {
-      id: pillHover
-    }
-
-    MouseArea {
-      id: pillPress
-      anchors.fill: parent
-      cursorShape: Qt.PointingHandCursor
-      onClicked: pill.activated()
-    }
-  }
-
-  // generic slider with keyboard support (←/→ ±1%)
-  component BarSlider: Item {
-    id: slider
-    property real value: 0
-    signal moved(real newValue)
-
-    height: 16
-    activeFocusOnTab: true
-
-    function nudge(delta) {
-      slider.moved(Math.max(0, Math.min(1, slider.value + delta)));
-    }
-
-    Keys.onLeftPressed: nudge(-0.01)
-    Keys.onRightPressed: nudge(0.01)
-    Keys.onDownPressed: nudge(-0.01)
-    Keys.onUpPressed: nudge(0.01)
-
-    Rectangle {
-      anchors.verticalCenter: parent.verticalCenter
-      width: parent.width
-      height: 6
-      radius: 3
-      color: Theme.hover
-      border.color: slider.activeFocus ? Theme.accent : "transparent"
-      border.width: 1
-
-      Behavior on border.color {
-        ColorAnimation { duration: Theme.hoverDuration }
-      }
-
-      Rectangle {
-        width: parent.width * Math.max(0, Math.min(1, slider.value))
-        height: parent.height
-        radius: parent.radius
-        color: Theme.accent
-
-        Behavior on width {
-          NumberAnimation { duration: 90; easing.type: Easing.OutCubic }
-        }
-      }
-    }
-
-    MouseArea {
-      anchors.fill: parent
-      function setFromX(x) {
-        slider.moved(Math.max(0, Math.min(1, x / width)));
-      }
-      onPressed: (mouse) => setFromX(mouse.x)
-      onPositionChanged: (mouse) => {
-        if (mouse.buttons & Qt.LeftButton)
-          setFromX(mouse.x);
-      }
-    }
-  }
-
-  // section card; highlights when a bar widget deep-links to it
-  component SectionCard: Rectangle {
-    id: card
-    property string sectionId: ""
-    property string title: ""
-    default property alias body: inner.children
-
-    readonly property bool active: ShellState.centerSection === card.sectionId && card.sectionId !== ""
-
-    width: flick.width
-    height: inner.implicitHeight + 28
-    radius: Theme.radius
-    color: Theme.bg
-    border.color: active ? Theme.accent : Theme.border
-    border.width: active ? 2 : 1
-
-    Behavior on y {
-      NumberAnimation { duration: Theme.viewDuration; easing.type: Easing.OutCubic }
-    }
-
-    Behavior on border.color {
-      ColorAnimation { duration: Theme.hoverDuration }
-    }
-
-    Column {
-      id: inner
-      anchors.left: parent.left
-      anchors.right: parent.right
-      anchors.top: parent.top
-      anchors.margins: 14
-      spacing: 10
-
-      Text {
-        visible: card.title !== ""
-        width: parent.width
-        text: card.title
-        color: card.active ? Theme.accent : Theme.muted
-        font.family: Theme.fontFamily
-        font.pixelSize: 11
-        font.bold: true
-      }
-    }
-  }
-
-  // mini stat row with bar (system section)
-  component StatRow: Item {
-    property string label: ""
-    property string value: ""
-    property real fraction: 0
-
-    width: parent ? parent.width : 0
-    height: 30
-
-    Text {
-      id: statLabel
-      anchors.left: parent.left
-      anchors.top: parent.top
-      text: label
-      color: Theme.muted
-      font.family: Theme.fontFamily
-      font.pixelSize: 11
-    }
-
-    Text {
-      anchors.right: parent.right
-      anchors.top: parent.top
-      text: value
-      color: Theme.fg
-      font.family: Theme.fontFamily
-      font.pixelSize: 11
-    }
-
-    Rectangle {
-      anchors.left: parent.left
-      anchors.right: parent.right
-      anchors.bottom: parent.bottom
-      height: 5
-      radius: 2
-      color: Theme.hover
-
-      Rectangle {
-        width: parent.width * Math.max(0, Math.min(1, fraction))
-        height: parent.height
-        radius: parent.radius
-        color: Theme.accent
-      }
-    }
-  }
+  // (StatRow lives in ../components now)
 
   // dim scrim, click outside to close
   Rectangle {
@@ -543,6 +328,7 @@ PanelWindow {
           QuickToggle {
             icon: Icons.wifi
             label: "Wi-Fi"
+            cardWidth: ccCard.width
             on: Networking.wifiEnabled
             tint: Theme.accent
             onActivated: ShellState.openCenterView("wifi")
@@ -551,6 +337,7 @@ PanelWindow {
           QuickToggle {
             icon: Icons.bluetooth
             label: "Bluetooth"
+            cardWidth: ccCard.width
             on: cc.btAdapter ? cc.btAdapter.enabled : false
             tint: Theme.accentSoft
             onActivated: ShellState.openCenterView("bluetooth")
@@ -559,6 +346,7 @@ PanelWindow {
           QuickToggle {
             icon: ShellState.dnd ? Icons.bellSlash : Icons.bell
             label: "DND"
+            cardWidth: ccCard.width
             on: ShellState.dnd
             tint: Theme.critical
             onActivated: ShellState.dnd = !ShellState.dnd
@@ -567,6 +355,7 @@ PanelWindow {
           QuickToggle {
             icon: Icons.moon
             label: "Night"
+            cardWidth: ccCard.width
             on: Sys.nightLight
             tint: Theme.accentSoft
             onActivated: Theme.toggleNightLight()
@@ -596,6 +385,7 @@ PanelWindow {
 
             SectionCard {
               id: sysCard
+              contentWidth: flick.width
               sectionId: "system"
               title: "System"
 
@@ -620,6 +410,7 @@ PanelWindow {
 
             SectionCard {
               id: dispCard
+              contentWidth: flick.width
               sectionId: "display"
               title: "Display"
 
@@ -684,6 +475,7 @@ PanelWindow {
 
             SectionCard {
               id: powCard
+              contentWidth: flick.width
               sectionId: "power"
               title: "Power"
 
@@ -778,6 +570,7 @@ PanelWindow {
 
             SectionCard {
               id: audioCard
+              contentWidth: flick.width
               sectionId: "audio"
               title: "Sound"
 
@@ -851,6 +644,7 @@ PanelWindow {
 
             SectionCard {
               id: calCard
+              contentWidth: flick.width
               sectionId: "calendar"
               title: "Calendar"
 

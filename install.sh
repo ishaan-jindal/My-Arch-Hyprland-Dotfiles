@@ -59,8 +59,8 @@ pacman_packages=(
 
 aur_packages=(
     "mpvpaper"
-    # Uncomment if you want the browser bound to Super+B in hyprland.lua:
-    # "zen-browser-bin"
+    # Browser bound to Super+B in hyprland.lua:
+    "zen-browser-bin"
     # Optional 1:1 accents — skipped by default, gtk2 build pulls ~400MB+ GNOME/gtk clone.
     # "gruvbox-gtk-theme-git"
     # "catppuccin-gtk-theme-mocha"
