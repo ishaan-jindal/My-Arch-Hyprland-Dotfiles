@@ -21,7 +21,7 @@ package list; Quickshell owns every one of those responsibilities.
 | Bluetooth panel | `components/BluetoothPanel.qml` (control centre view: scan, pair, connect, forget) |
 | Calendar | `components/Calendar.qml` (control centre) |
 | Session menu | `popups/SessionMenu.qml` (lock/hibernate/logout/shutdown/suspend/reboot) |
-| Notifications | `popups/NotificationPopups.qml` + `popups/ControlCenter.qml` |
+| Notifications | `Notify.qml` + `popups/NotificationPopups.qml` (transient cards; no history in control centre) |
 | Control centre | `popups/ControlCenter.qml` (center-top popout: toggles, system/display/power/sound sections, calendar, media) |
 | Volume/brightness/mic OSD | `popups/Osd.qml` |
 | Keybind cheatsheet | `popups/KeybindCheatsheet.qml` (`Super + K`) |
@@ -95,7 +95,7 @@ quickshell/.config/quickshell/
 ├── Icons.qml                 # Nerd Font glyphs (lifted from the old Waybar config)
 ├── Sys.qml                   # CPU/mem/temp/brightness/profile/night light/audio/battery
 ├── ShellState.qml            # popup + OSD state, persisted dnd/night-light flags
-├── Notify.qml                # NotificationServer
+├── Notify.qml                # NotificationServer + popupModel (independent deadlines, dismissAll)
 ├── components/               # bar + one file per module
 │   ├── Bar.qml               #   PanelWindow per screen, 3 islands
 │   ├── BarModule.qml         #   shared module base (padding/click handling)
@@ -113,8 +113,8 @@ quickshell/.config/quickshell/
     ├── Launcher.qml          # apps + clipboard pages
     ├── Picker.qml            # slide-down wallpaper picker
     ├── SessionMenu.qml       # lock / logout / power actions
-    ├── ControlCenter.qml     # toggles, calendar, audio, media, notifications
-    ├── NotificationPopups.qml
+    ├── ControlCenter.qml     # toggles, calendar, audio, media (no notification history)
+    ├── NotificationPopups.qml  # transient cards: bezier slide, right-click clear-all, per-card timeout
     ├── KeybindCheatsheet.qml # Super + K
     └── Osd.qml               # volume / brightness / mic OSD
 ```
@@ -152,6 +152,26 @@ The OSD appears automatically on volume/mute/brightness/microphone changes
 from any source (`wpctl`, media keys, `pavucontrol`, the control centre
 slider).
 
+## Notifications
+
+Transient top-right cards (`Notify.qml` + `popups/NotificationPopups.qml`,
+360px stack under the bar; no history in the control centre):
+
+- Timeouts: server `expireTimeout` when set, else Low 5s, Normal 10s,
+  Critical stays until closed. Each card drains a 2px progress bar.
+- Deadlines are per-card and independent: a new arrival or a dismissal never
+  restarts the others (`popupModel` ListModel + absolute `dismissAt`).
+- Close with the 24px hover X, run an action via its button, or right-click
+  anywhere on the stack to clear all (`dismissAll()`). DND suppresses popups
+  but keeps them tracked.
+- Motion is append-only: new cards slide right-to-left at the bottom
+  (280ms bezier), exits fade+slide back (200ms) then collapse height
+  (220ms bezier) so cards below glide up; siblings otherwise stay put.
+- Hovering a card pauses its dismiss timer and progress drain; unhover
+  resumes with the leftover time.
+- The popup window is a fixed full-height strip (never resized mid-animation);
+  exits collapse wrapper height to exactly 0px, so removals never snap.
+
 ## Frosted glass + motion
 
 Popups (control centre, launcher, picker, session, cheatsheet, OSD,
@@ -172,7 +192,9 @@ Popup animations share one motion vocabulary defined in `Theme.qml`
 for Wi-Fi/Bluetooth view cross-fades, `scrollDuration` 320 ms for
 programmatic scrolls, `hoverDuration` 150 ms for every hover/active color
 ease). Scrolling uses softer `flickDeceleration`/`maximumFlickVelocity`
-for a longer glide.
+for a longer glide. Notifications diverge: bezier slide-in (280 ms) /
+slide-out (200 ms) per card plus a 220 ms height-collapse so cards below
+glide up, append-only otherwise; hovering a card pauses its timer.
 
 ## Data sources
 
