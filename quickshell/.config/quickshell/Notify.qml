@@ -46,8 +46,12 @@ Singleton {
   readonly property var tracked: server.trackedNotifications.values
 
   function timeoutFor(n) {
+    // expireTimeout arrives as raw freedesktop ms (0 = never, -1 = default)
+    // despite docs claiming seconds — convert to seconds for callers.
+    if (n.expireTimeout === 0)
+      return 0;
     if (n.expireTimeout > 0)
-      return n.expireTimeout;
+      return n.expireTimeout / 1000;
     if (n.urgency === NotificationUrgency.Critical)
       return 0;
     if (n.urgency === NotificationUrgency.Low)
