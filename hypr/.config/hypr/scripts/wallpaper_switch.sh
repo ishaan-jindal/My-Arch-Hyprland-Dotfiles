@@ -19,11 +19,10 @@ if command -v readlink >/dev/null 2>&1; then
     SCRIPT_SRC="$(readlink -f "$SCRIPT_SRC")"
 fi
 SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_SRC")" && pwd)"
-# Repo checkout root (hypr/.config/hypr/scripts → up 4 levels); the
-# limine-sync path below falls back to ~/dotfiles when that fails.
-REPO_ROOT="$(cd "$SCRIPT_DIR/../../../.." 2>/dev/null && pwd || echo "$HOME/dotfiles")"
+# Repo checkout root (hypr/.config/hypr/scripts → up 4 levels), derived from
+# this script's real path so the checkout can live anywhere.
+REPO_ROOT="$(cd "$SCRIPT_DIR/../../../.." 2>/dev/null && pwd)"
 LIMINE_SYNC="$REPO_ROOT/limine/scripts/limine-sync"
-[ -x "$LIMINE_SYNC" ] || LIMINE_SYNC="$HOME/dotfiles/limine/scripts/limine-sync"
 # shellcheck source=lib/wallpaper.sh
 . "$SCRIPT_DIR/lib/wallpaper.sh"
 # shellcheck source=lib/autotheme.sh

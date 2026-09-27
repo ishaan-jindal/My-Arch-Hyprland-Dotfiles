@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
 # Build the Limine wallpaper pack from the Hyprland wallpaper assets.
-# Output: ~/dotfiles/limine/assets/wallpapers/w*.jpg (1920x1080, 8.3-safe names)
+# Output: <repo>/limine/assets/wallpapers/w*.jpg (1920x1080, 8.3-safe names)
 set -euo pipefail
 
 ASSETS="$HOME/.config/hypr/themes/wallpapers/assets"
-OUT="$HOME/dotfiles/limine/assets/wallpapers"
+# Repo-relative, so the checkout can live anywhere.
+OUT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../assets/wallpapers" && pwd)"
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
 mkdir -p "$OUT"

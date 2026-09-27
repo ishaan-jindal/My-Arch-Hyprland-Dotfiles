@@ -3,8 +3,8 @@
 ## 1) Clone
 
 ```bash
-git clone https://github.com/SacredNightmare99/My-Arch-Hyprland-Dotfiles ~/.dotfiles
-cd ~/.dotfiles
+git clone https://github.com/ishaan-jindal/My-Arch-Hyprland-Dotfiles.git ~/dotfiles
+cd ~/dotfiles
 ```
 
 ## 2) Install dependencies

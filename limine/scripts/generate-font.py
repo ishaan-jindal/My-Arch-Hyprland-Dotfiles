@@ -14,6 +14,7 @@ Usage:
 
 import argparse
 import os
+from pathlib import Path
 from PIL import Image, ImageDraw, ImageFont
 
 # Standard CP437 glyphs for the control range (0x00-0x1F) and 0x7F
@@ -221,7 +222,7 @@ def main():
     ap.add_argument("--ss", type=int, default=4, help="supersampling factor")
     ap.add_argument("--name", default="jetbrains-mono")
     ap.add_argument(
-        "--outdir", default=os.path.expanduser("~/dotfiles/limine/assets/font")
+        "--outdir", default=str(Path(__file__).resolve().parents[1] / "assets" / "font")
     )
     args = ap.parse_args()
 

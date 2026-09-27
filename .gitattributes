@@ -1,0 +1,25 @@
+# Normalize text in the index; check out with the platform's native EOL.
+* text=auto
+
+# Shell/config sources are LF-only by definition — Hyprland, fish, QML and
+# Lua all break on CRLF. Keep the index canonical so a Windows editor cannot
+# poison the working tree.
+*.sh    text eol=lf
+*.fish  text eol=lf
+*.qml   text eol=lf
+*.lua   text eol=lf
+*.conf  text eol=lf
+*.css   text eol=lf
+*.md    text eol=lf
+*.json  text eol=lf
+*.toml  text eol=lf
+*.ini   text eol=lf
+*.py    text eol=lf
+
+# Tracked media and generated fonts: never diff, never EOL-convert.
+# (Wallpapers alone are ~41 MB; keep them out of text handling entirely.)
+*.jpg   binary
+*.jpeg  binary
+*.png   binary
+*.mp4   binary
+*.f16   binary
