@@ -242,7 +242,8 @@ hl.bind(mainMod .. " + E", hl.dsp.exec_cmd("nemo"))
 
 -- Android emulator
 hl.bind(mainMod .. " + M",
-  hl.dsp.exec_cmd("~/Android/Sdk/emulator/emulator -avd flutter_emulator -writable-system -no-snapshot"))
+  hl.dsp.exec_cmd(
+  "QT_QPA_PLATFORM=xcb ~/Android/Sdk/emulator/emulator -avd flutter_emulator -writable-system -no-snapshot"))
 
 -- Volume (repeating + locked)
 hl.bind("XF86AudioRaiseVolume", hl.dsp.exec_cmd("wpctl set-volume -l 1 @DEFAULT_AUDIO_SINK@ 1%+"),
