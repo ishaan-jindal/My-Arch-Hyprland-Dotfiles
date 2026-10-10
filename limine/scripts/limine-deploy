@@ -151,7 +151,7 @@ sync_wallpaper() {
     tmp="$(mktemp --suffix=.jpg)"
     frame="$(mktemp --suffix=.png)"
     case "${cur,,}" in
-        *.jpg|*.jpeg|*.png)
+        *.jpg|*.jpeg|*.png|*.gif)
             magick "$cur" -auto-orient -resize '1920x1080^' -gravity center \
                 -extent 1920x1080 -colorspace sRGB -modulate 75,100,100 \
                 -blur 0x3 -quality 84 -strip "$tmp" ;;

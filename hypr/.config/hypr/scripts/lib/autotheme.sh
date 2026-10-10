@@ -63,10 +63,13 @@ resolve_wallpaper() {
 
 # ----------------------
 # is_video <path>
+# Anything mpvpaper plays rather than awww: real videos and animated GIFs.
+# These need an ffmpeg-sampled frame for matugen/thumbnails — matugen and the
+# picker cannot read a GIF directly.
 # ----------------------
 is_video() {
     case "${1,,}" in
-        *.mp4 | *.mkv | *.webm) return 0 ;;
+        *.mp4 | *.mkv | *.webm | *.gif) return 0 ;;
         *) return 1 ;;
     esac
 }

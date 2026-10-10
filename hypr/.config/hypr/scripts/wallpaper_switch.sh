@@ -4,7 +4,7 @@
 # Usage:
 #   wallpaper_switch.sh apply <name-or-path>  # any image/video file
 #   wallpaper_switch.sh list-json             # JSON array of assets dir (for Quickshell)
-#   wallpaper_switch.sh ensure-thumbs         # generate missing video thumbnails
+#   wallpaper_switch.sh ensure-thumbs         # generate missing video/GIF thumbnails
 #
 # apply sets the wallpaper (awww/mpvpaper), runs matugen once in dark mode to
 # regenerate ~/.cache/autotheme.json (watched live by Quickshell), syncs the
@@ -77,17 +77,16 @@ list_json() {
         return 0
     fi
     find "$ASSETS_DIR" -maxdepth 1 -type f \
-        \( -iname '*.jpg' -o -iname '*.jpeg' -o -iname '*.png' \
+        \( -iname '*.jpg' -o -iname '*.jpeg' -o -iname '*.png' -o -iname '*.gif' \
         -o -iname '*.mp4' -o -iname '*.mkv' -o -iname '*.webm' \) \
         -print0 \
     | sort -z \
     | while IFS= read -r -d '' f; do
-        local base ext isvid thumb
+        local base isvid thumb
         base="$(basename "$f")"
-        ext="$(printf '%s' "${base##*.}" | tr '[:upper:]' '[:lower:]')"
         isvid=false
         thumb=""
-        if [ "$ext" = "mp4" ]; then
+        if is_video "$f"; then
             isvid=true
             thumb="$(thumb_for "$f")"
             [ -f "$thumb" ] || thumb=""
@@ -99,11 +98,12 @@ list_json() {
 }
 
 # ----------------------
-# ensure-thumbs: generate every missing video thumbnail
+# ensure-thumbs: generate every missing video/GIF thumbnail
 # ----------------------
 ensure_thumbs() {
     [ -d "$ASSETS_DIR" ] || return 0
-    find "$ASSETS_DIR" -maxdepth 1 -type f -iname '*.mp4' -print0 \
+    # ensure_thumb no-ops for stills, so every file is a fine input.
+    find "$ASSETS_DIR" -maxdepth 1 -type f -print0 \
     | while IFS= read -r -d '' f; do
         ensure_thumb "$f"
     done

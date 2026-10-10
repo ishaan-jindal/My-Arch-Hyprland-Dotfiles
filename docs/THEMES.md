@@ -68,11 +68,15 @@ wallpaper skips the matugen run when the generated file is still valid.
 
 Drop the file into `hypr/.config/hypr/themes/wallpapers/assets/`. That is
 all — it appears in the picker on next open. Accepted formats: `.jpg`,
-`.jpeg`, `.png` (via `awww`), `.mp4`, `.mkv`, `.webm` (via `mpvpaper`).
+`.jpeg`, `.png` (via `awww`), `.gif`, `.mp4`, `.mkv`, `.webm` (via
+`mpvpaper`). Animated `.gif` files play as animations (`awww` would only
+decode the first frame); their palette is sampled from a middle frame like
+any other video.
 
-Video thumbnails (`wallpapers/thumbs/<name>.jpg`, middle frame at 512px)
-generate automatically on first apply; `thumbs/` is a gitignored cache.
-`wallpaper_switch.sh ensure-thumbs` backfills them all at once.
+Video and GIF thumbnails (`wallpapers/thumbs/<name>.jpg`, middle frame at
+512px) generate automatically on first apply; `thumbs/` is a gitignored
+cache. `wallpaper_switch.sh ensure-thumbs` backfills them all at once and
+only writes missing ones.
 
 ## Ghostty follows too
 
