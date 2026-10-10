@@ -16,7 +16,7 @@ pkill mpvpaper >/dev/null 2>&1 || true
 pkill awww-daemon >/dev/null 2>&1 || true
 
 if is_video "$wall"; then
-    mpvpaper -o "loop --no-audio --hwdec=auto --vo=gpu --profile=fast" "*" "$wall" &
+    mpvpaper -o "--loop=inf --no-audio --hwdec=auto --vo=gpu --profile=fast" "*" "$wall" &
 else
     awww-daemon >/dev/null 2>&1 &
     sleep 0.2
