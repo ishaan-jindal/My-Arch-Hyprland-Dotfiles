@@ -84,29 +84,53 @@ thumb_for() {
 }
 
 # ----------------------
+# bridge_for <wallpaper-path> -> first-frame still path (videos/GIFs only)
+# Fullscreen, unlike the 512px picker thumb: awww shows the bridge for the
+# whole transition, so an upscaled thumb would look soft.
+# ----------------------
+bridge_for() {
+    local base
+    base="$(basename "$1")"
+    printf '%s/%s.bridge.jpg' "$THUMBS_DIR" "${base%.*}"
+}
+
+# ----------------------
 # ensure_thumb <wallpaper-path>
 # Images need nothing (the picker loads them directly); videos get a
-# middle-frame thumbnail so they preview instead of a play placeholder.
+# middle-frame thumbnail so they preview instead of a play placeholder,
+# plus a fullscreen first-frame bridge still (see bridge_for) that mediates
+# wallpaper transitions. Missing files only — safe to call every switch.
 # ----------------------
 ensure_thumb() {
     local wall="$1"
     is_video "$wall" || return 0
 
-    local thumb
-    thumb="$(thumb_for "$wall")"
-    [ -f "$thumb" ] && return 0
-
     mkdir -p "$THUMBS_DIR"
 
-    local dur="0" mid="5"
-    if command -v ffprobe >/dev/null 2>&1; then
-        dur=$(ffprobe -v error -show_entries format=duration \
-            -of default=noprint_wrappers=1:nokey=1 "$wall" 2>/dev/null || echo 0)
-    fi
-    mid=$(python3 -c "d=float('${dur}'.strip() or 0); print(d/2 if d>0 else 5)" 2>/dev/null || echo 5)
+    local thumb
+    thumb="$(thumb_for "$wall")"
+    if [ ! -f "$thumb" ]; then
+        local dur="0" mid="5"
+        if command -v ffprobe >/dev/null 2>&1; then
+            dur=$(ffprobe -v error -show_entries format=duration \
+                -of default=noprint_wrappers=1:nokey=1 "$wall" 2>/dev/null || echo 0)
+        fi
+        mid=$(python3 -c "d=float('${dur}'.strip() or 0); print(d/2 if d>0 else 5)" 2>/dev/null || echo 5)
 
-    ffmpeg -v error -y -ss "$mid" -i "$wall" -frames:v 1 \
-        -vf scale=512:-1 -q:v 3 "$thumb" 2>/dev/null || rm -f "$thumb"
+        ffmpeg -v error -y -ss "$mid" -i "$wall" -frames:v 1 \
+            -vf scale=512:-1 -q:v 3 "$thumb" 2>/dev/null || rm -f "$thumb"
+    fi
+
+    # First frame at 1920x1080, letterboxed exactly as mpv renders it
+    # (fit + black bars): mpvpaper always starts at t=0, so the
+    # still-to-video handoff is near pixel-identical — including the bars
+    # on wider-than-16:9 videos like chill.960x486.mp4.
+    local bridge
+    bridge="$(bridge_for "$wall")"
+    [ -f "$bridge" ] && return 0
+    ffmpeg -v error -y -ss 0 -i "$wall" -frames:v 1 \
+        -vf "scale=1920:1080:force_original_aspect_ratio=decrease,pad=1920:1080:(ow-iw)/2:(oh-ih)/2:black" \
+        -q:v 2 "$bridge" 2>/dev/null || rm -f "$bridge"
 }
 
 # ----------------------

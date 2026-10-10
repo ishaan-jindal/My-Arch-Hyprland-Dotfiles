@@ -4,7 +4,7 @@
 # Usage:
 #   wallpaper_switch.sh apply <name-or-path>  # any image/video file
 #   wallpaper_switch.sh list-json             # JSON array of assets dir (for Quickshell)
-#   wallpaper_switch.sh ensure-thumbs         # generate missing video/GIF thumbnails
+#   wallpaper_switch.sh ensure-thumbs         # backfill missing video/GIF thumbs + bridge stills
 #
 # apply sets the wallpaper (awww/mpvpaper), runs matugen once in dark mode to
 # regenerate ~/.cache/autotheme.json (watched live by Quickshell), syncs the

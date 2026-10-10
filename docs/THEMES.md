@@ -76,7 +76,12 @@ any other video.
 Video and GIF thumbnails (`wallpapers/thumbs/<name>.jpg`, middle frame at
 512px) generate automatically on first apply; `thumbs/` is a gitignored
 cache. `wallpaper_switch.sh ensure-thumbs` backfills them all at once and
-only writes missing ones.
+only writes missing ones. Each video/GIF also gets a fullscreen first-frame
+bridge still (`thumbs/<name>.bridge.jpg`): switches always pass through a
+still — waving to the bridge before a video maps, or revealing the bridge
+when a video drops — so there is never a black gap or a flash of the
+previous wallpaper. Bridges are first frames letterboxed exactly as mpv
+renders them, so even non-16:9 videos hand off seamlessly.
 
 ## Ghostty follows too
 
