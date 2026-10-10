@@ -25,8 +25,7 @@ Item {
   ]
 
   function close() {
-    ShellState.islandMode = "";
-    ShellState.launcherOpen = false;
+    ShellState.closeAllPopups();
   }
 
   function move(delta) {

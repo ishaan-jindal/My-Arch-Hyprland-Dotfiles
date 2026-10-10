@@ -15,8 +15,8 @@ Item {
   property real dotSize: 6
   property int spaces: 5
 
-  // Wallpaper-driven accent (same token the pill uses), fallback #92C1D8.
-  readonly property color accent: Theme.accent !== undefined ? Theme.accent : "#92C1D8"
+  // Wallpaper accent (same token the pill uses).
+  readonly property color accent: Theme.accent
 
   implicitWidth: row.implicitWidth
   implicitHeight: Math.max(16, dotSize + 10)

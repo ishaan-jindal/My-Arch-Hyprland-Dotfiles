@@ -1,6 +1,7 @@
 import QtQuick
 import Quickshell
 import Quickshell.Wayland
+import Quickshell.Hyprland
 import ".."
 
 // Dynamic Island top bar (option B): one centered pill per monitor.
@@ -37,22 +38,23 @@ Variants {
       exclusionMode: ExclusionMode.Ignore
       WlrLayershell.layer: WlrLayer.Top
       WlrLayershell.namespace: "quickshell-bar" // kept: hyprland.lua layerrules match this
-      WlrLayershell.keyboardFocus: ShellState.islandMode !== "" ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
+      WlrLayershell.keyboardFocus: (ShellState.islandMode !== "" && (Hyprland.focusedMonitor === null || Hyprland.monitorFor(modelData) === Hyprland.focusedMonitor)) ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
 
       mask: Region {
-        // Tight on the pill at rest (full click-through); full window
-        // while expanded OR morphing, so the Region swaps only after
-        // the morph settles — never per-frame mid-close.
-        item: (island.expanded || island.morphing) ? dismissArea : island.pillHit
+        // Tight on the pill unless a pane is open (full window then so
+        // outside clicks reach the dismiss layer). Hover-peek never
+        // widens the mask. Swaps on state change only, never per-frame.
+        item: island.mode !== "" ? dismissArea : island.pillHit
       }
 
       // Click-outside-to-minimize: full-window transparent layer BEHIND
-      // the pill. The island above wins all pill hits, so buttons keep
-      // working; anything else in the window dismisses.
+      // the pill, live only while a pane is open. The island above wins
+      // all pill hits, so buttons keep working; anything else in the
+      // window dismisses.
       MouseArea {
         id: dismissArea
         anchors.fill: parent
-        enabled: island.expanded
+        enabled: island.mode !== ""
         onClicked: island.dismiss()
       }
 

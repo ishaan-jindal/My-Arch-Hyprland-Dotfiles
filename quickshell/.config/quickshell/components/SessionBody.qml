@@ -20,6 +20,10 @@ Item {
 
   property int currentIndex: 0
   property bool active: false
+  // Two-step arm for letter keys: first press highlights + arms, second
+  // press of the SAME letter (or Enter/Space) runs. Destructive actions
+  // never fire on a single keypress.
+  property string armedKey: ""
 
   function focusCurrent() {
     const it = cells.itemAt(currentIndex);
@@ -40,19 +44,21 @@ Item {
 
   onActiveChanged: {
     if (active) {
+      armedKey = "";
       focusCurrent();
       focusRetry.restart();
     }
   }
 
   function run(action) {
-    ShellState.islandMode = "";
-    ShellState.sessionOpen = false;
+    ShellState.closeAllPopups();
     Quickshell.execDetached({ command: action.cmd });
   }
 
   function move(delta) {
     currentIndex = (currentIndex + delta % 6 + 6) % 6;
+    armedKey = "";
+    focusCurrent();
   }
 
   Text {
@@ -143,8 +149,15 @@ Item {
           const text = String(event.text || "").toLowerCase();
           for (let i = 0; i < body.actions.length; i++) {
             if (body.actions[i].key === text) {
-              body.currentIndex = i;
-              body.run(body.actions[i]);
+              // Two-step: arm on first press, run on confirmation.
+              if (body.armedKey === text) {
+                body.armedKey = "";
+                body.run(body.actions[i]);
+              } else {
+                body.armedKey = text;
+                body.currentIndex = i;
+                body.focusCurrent();
+              }
               event.accepted = true;
               return;
             }

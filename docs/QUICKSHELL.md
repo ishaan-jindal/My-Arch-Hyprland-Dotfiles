@@ -180,7 +180,7 @@ sets `WlrLayershell.namespace: "quickshell-popup"` and `hyprland.lua` adds
 
 ```lua
 hl.layer_rule({ match = { namespace = "^quickshell-popup$" }, blur = true, ignore_alpha = 0.5 })
-hl.layer_rule({ match = { namespace = "^quickshell-bar$" },     blur = true, ignore_alpha = 0.5 })
+hl.layer_rule({ match = { namespace = "^quickshell-bar$" },     blur = true, ignore_alpha = 0.18 })
 ```
 
 so Hyprland blurs what sits behind the near-opaque cards and bar islands

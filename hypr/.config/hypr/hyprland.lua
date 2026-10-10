@@ -263,8 +263,7 @@ hl.bind("XF86AudioPause", hl.dsp.exec_cmd("playerctl play-pause"), { locked = tr
 hl.bind("XF86AudioPlay", hl.dsp.exec_cmd("playerctl play-pause"), { locked = true })
 hl.bind("XF86AudioPrev", hl.dsp.exec_cmd("playerctl previous"), { locked = true })
 
--- Misc
-hl.bind("CTRL + RETURN", hl.dsp.exec_cmd("echo"))
+-- Misc (reserved)
 
 
 ----------------------------
@@ -305,7 +304,6 @@ hl.layer_rule({
 hl.layer_rule({
   match = { namespace = "^quickshell-bar$" },
   blur = true,
-  -- 0.18 so the island glass (alpha 0.85) still frosts; the soft fake
-  -- shadow underneath stays unblurred.
+  -- 0.18 so the island glass (alpha 0.85) still frosts.
   ignore_alpha = 0.18,
 })

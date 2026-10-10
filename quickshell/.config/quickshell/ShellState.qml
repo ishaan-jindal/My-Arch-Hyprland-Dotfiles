@@ -20,37 +20,20 @@ Singleton {
   property alias dnd: persist.dnd
 
   // ---------------------------------------------------------------------
-  // Popup visibility
-  //
-  // The pill is the single host for the control centre and the launcher:
-  // `islandMode` ("", "controls", "launcher") drives the pill pane, and
-  // the center/launcher toggles below set it. `centerOpen`/`launcherOpen`
-  // stay as legacy compat props (diagnostics, retired overlay windows) —
-  // nothing sets them true anymore.
+  // Pill modes — the pill is the single host for every pane.
   // ---------------------------------------------------------------------
-  property bool launcherOpen: false
-  property string launcherPage: "apps"
-  property bool sessionOpen: false
-  property bool centerOpen: false
+  property string launcherPage: "apps" // apps | clipboard
   property string centerView: "main" // main | wifi | bluetooth
   property string centerSection: "" // system | display | power | audio | calendar — deep-link target
-  property bool cheatsheetOpen: false
-  property bool pickerOpen: false
-  property string pickerTab: "wallpapers" // wallpapers only; kept for IPC compat
   property string islandMode: "" // "" | "controls" | "launcher" | "picker" | "session" | "keys" | "osd" | "calendar"
 
   function closeAllPopups() {
-    launcherOpen = false;
-    sessionOpen = false;
-    centerOpen = false;
     centerSection = "";
-    cheatsheetOpen = false;
-    pickerOpen = false;
     centerView = "main";
     islandMode = "";
   }
 
-  // Wallpaper picker (slide-down). `tab` is accepted for IPC compat and
+  // Wallpaper picker (Super+T). `tab` is accepted for IPC compat and
   // ignored — there is only the wallpapers view; the theme follows the
   // wallpaper automatically.
   function togglePicker(tab) {
@@ -59,7 +42,6 @@ Singleton {
       return;
     }
     closeAllPopups();
-    pickerTab = "wallpapers";
     islandMode = "picker";
   }
 

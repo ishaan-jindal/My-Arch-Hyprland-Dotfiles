@@ -11,18 +11,6 @@ import "popups"
 ShellRoot {
   Bar {}
   NotificationPopups {}
-  Launcher {
-    id: launcher
-  }
-  SessionMenu {}
-  ControlCenter {
-    id: controlCenter
-  }
-  Osd {}
-  KeybindCheatsheet {}
-  Picker {
-    id: picker
-  }
 
   IpcHandler {
     target: "shell"
@@ -107,20 +95,9 @@ ShellRoot {
         notifications: Notify.tracked.length,
         popups: Notify.popups.length,
         dnd: ShellState.dnd,
-        launcherOpen: ShellState.launcherOpen,
+        islandMode: ShellState.islandMode,
         launcherPage: ShellState.launcherPage,
-        launcherItems: launcher.items.length,
-        launcherFocus: launcher.inputFocus,
-        pickerOpen: ShellState.pickerOpen,
-        pickerTab: ShellState.pickerTab,
-        pickerIndex: picker.pickerIndex,
-        pickerCount: picker.pickerCount,
-        pickerFocus: picker.wallpaperGridFocus,
-        calendarSelected: Qt.formatDateTime(controlCenter.calendarSelected, "yyyy-MM-dd"),
-        wifiListFocus: controlCenter.wifiListFocus,
-        btListFocus: controlCenter.btListFocus,
         currentWallpaper: Theme.currentWallpaper,
-        centerOpen: ShellState.centerOpen,
         centerView: ShellState.centerView,
         centerSection: ShellState.centerSection,
         wifiEnabled: Networking.wifiEnabled,
@@ -132,9 +109,7 @@ ShellRoot {
           return 0;
         })(),
         btAdapter: Bluetooth.defaultAdapter ? Bluetooth.defaultAdapter.name : "",
-        btDevices: Bluetooth.defaultAdapter ? Bluetooth.defaultAdapter.devices.values.length : 0,
-        sessionOpen: ShellState.sessionOpen,
-        cheatsheetOpen: ShellState.cheatsheetOpen
+        btDevices: Bluetooth.defaultAdapter ? Bluetooth.defaultAdapter.devices.values.length : 0
       });
     }
 

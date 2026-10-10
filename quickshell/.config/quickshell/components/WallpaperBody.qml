@@ -17,8 +17,7 @@ Item {
   readonly property int pickerCount: wallpaperGrid.count
 
   function close() {
-    ShellState.islandMode = "";
-    ShellState.pickerOpen = false;
+    ShellState.closeAllPopups();
   }
 
   function activateWallpaper() {

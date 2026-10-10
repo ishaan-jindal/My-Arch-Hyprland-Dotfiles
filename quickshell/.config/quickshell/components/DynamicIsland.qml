@@ -1,7 +1,6 @@
 import QtQuick
 import Quickshell
 import Quickshell.Networking
-import Quickshell.Bluetooth
 import ".."
 
 // The Dynamic Island pill: glass notch stuck to the top edge (flush
@@ -32,14 +31,18 @@ Item {
   id: island
 
   property var barScreen
-  property alias pillItem: pill
   property alias pillHit: hitBox
 
   // Focus trapdoor: with Exclusive window focus while a pane is open,
-  // Esc anywhere unfocused collapses the pill (focused inputs handle
-  // Esc themselves first).
+  // Esc steps a wifi/bt sub-view back to main, else collapses the pill
+  // (focused inputs handle Esc themselves first).
   focus: ShellState.islandMode !== ""
-  Keys.onEscapePressed: ShellState.closeAllPopups()
+  Keys.onEscapePressed: {
+    if (ShellState.centerView !== "main")
+      ShellState.centerBack();
+    else
+      ShellState.closeAllPopups();
+  }
 
   readonly property int restW: 320
   readonly property int restH: 36
@@ -55,19 +58,16 @@ Item {
   readonly property int osdH: 160
   readonly property int calendarH: 328 // month grid + hint, 8px grid
 
-  readonly property string mode: ShellState.islandMode // "" | "controls" | "launcher"
-
-  readonly property bool anyPopupOpen: ShellState.centerOpen || ShellState.launcherOpen
-    || ShellState.sessionOpen || ShellState.pickerOpen || ShellState.cheatsheetOpen
+  readonly property string mode: ShellState.islandMode // "" | "controls" | "launcher" | "picker" | "session" | "keys" | "osd" | "calendar"
 
   // Hybrid triggers: hover peeks (delayed both ways), click latches,
-  // pill mode or any open popup holds. Geometry reads the settled
-  // targets below; faces read the sequenced flags (never the raw
-  // trigger, so content never races the morph).
+  // pill mode holds. Geometry reads the settled targets below; faces
+  // read the sequenced flags (never the raw trigger, so content never
+  // races the morph).
   property bool pointerInside: false
   property bool hoverPeek: false
   property bool latched: false
-  readonly property bool expanded: hoverPeek || latched || mode !== "" || anyPopupOpen
+  readonly property bool expanded: hoverPeek || latched || mode !== ""
 
   // Settled geometry: integer targets the pill animates toward. Mask
   // and pane layout bind here — never to the per-frame animated size
@@ -157,6 +157,12 @@ Item {
   }
   onModeChanged: {
     closeGeom.stop();
+    // Collapse owns its sequence via onExpandedChanged + closeGeom:
+    // bail on empty mode (or while collapsed) so geometry never starts
+    // before the content fade. Open-path double-fire with
+    // onExpandedChanged is same-tick/same-values and harmless.
+    if (mode === "" || !island.expanded)
+      return;
     kickMorph();
     kickFaces();
     if ((mode === "controls" && ShellState.centerView === "main") || mode === "calendar")
@@ -223,12 +229,12 @@ Item {
     }
   }
 
-  // Stage fits the widest pill (picker); height is the SETTLED target
-  // (never the animated size) so the window surface resizes on state
-  // changes only. Bar window (masked to the pill) hugs every mode.
-  // Padding is click-through.
+  // Stage fits the widest pill (picker); height holds the taller of
+  // rendered vs settled until settle so the window never guillotines
+  // fading content mid-close (then rests at targetH+18). Bar window
+  // (masked to the pill) hugs every mode. Padding is click-through.
   implicitWidth: pickerW
-  implicitHeight: island.targetH + 18
+  implicitHeight: Math.max(pill.height, island.targetH) + 18
   width: implicitWidth
   height: implicitHeight
 
@@ -241,7 +247,7 @@ Item {
     repeat: false
     onTriggered: {
       if (island.mode === "controls" && ShellState.centerView === "main")
-        wifiToggle.forceActiveFocus();
+        controlsBody.focusFirst();
       else if (island.mode === "calendar")
         cal.forceActiveFocus();
     }
@@ -304,27 +310,11 @@ Item {
   // Theme crossfade flows through these bindings on wallpaper switch.
   // Fallbacks hold if a token is ever missing.
   readonly property color islandBg: Qt.rgba(Theme.bgSolid.r, Theme.bgSolid.g, Theme.bgSolid.b, Theme.bgSolid.a * 0.85)
-  readonly property color islandAccent: Theme.accent !== undefined ? Theme.accent : "#92C1D8"
-  readonly property color islandFg: Theme.fg !== undefined ? Theme.fg : "#CCCCD4"
+  readonly property color islandAccent: Theme.accent
+  readonly property color islandFg: Theme.fg
 
   property string timeText: Qt.formatDateTime(new Date(), "HH:mm")
   property string dateText: Qt.formatDateTime(new Date(), "ddd d MMM")
-
-  readonly property var btAdapter: Bluetooth.defaultAdapter
-
-  function cycleProfile() {
-    const order = ["performance", "balanced", "power-saver"];
-    const i = order.indexOf(Sys.powerProfile);
-    Sys.setPowerProfile(order[(i + 1) % order.length]);
-  }
-
-  function profileLabel() {
-    if (Sys.powerProfile === "performance")
-      return "Performance";
-    if (Sys.powerProfile === "power-saver")
-      return "Saver";
-    return "Balanced";
-  }
 
   Timer {
     interval: 1000
@@ -345,7 +335,7 @@ Item {
     id: pill
     anchors.top: parent.top
     anchors.horizontalCenter: parent.horizontalCenter
-    width: island.startW + (island.targetW - island.startW) * island.morphT
+    width: Math.round(island.startW + (island.targetW - island.startW) * island.morphT)
     height: Math.round(island.startH + (island.targetH - island.startH) * island.morphT)
     // Scissor while growing or while faces sequence (open + lateral
     // switches); never during shrink — dismiss reads instant. Releases
@@ -361,7 +351,7 @@ Item {
       anchors.topMargin: -radius
       radius: island.startR + ((island.expanded ? 24 : 18) - island.startR) * island.morphT
       color: island.islandBg
-      border.color: Qt.rgba(1, 1, 1, 0.09)
+      border.color: Theme.border
       border.width: 1
     }
 
@@ -438,7 +428,7 @@ Item {
         Text {
           anchors.verticalCenter: parent.verticalCenter
           text: island.dateText
-          color: Qt.rgba(1, 1, 1, 0.55)
+          color: Theme.muted
           font.family: Theme.fontFamily
           font.pixelSize: 11
 
@@ -584,7 +574,7 @@ Item {
           anchors.verticalCenter: parent.verticalCenter
           width: 1
           height: 24
-          color: Qt.rgba(1, 1, 1, 0.12)
+          color: Theme.border
         }
 
         Column {
@@ -604,7 +594,7 @@ Item {
           Text {
             anchors.horizontalCenter: parent.horizontalCenter
             text: island.dateText
-            color: Qt.rgba(1, 1, 1, 0.45)
+            color: Theme.muted
             font.family: Theme.fontFamily
             font.pixelSize: 10
           }
@@ -620,7 +610,7 @@ Item {
           anchors.verticalCenter: parent.verticalCenter
           width: 1
           height: 24
-          color: Qt.rgba(1, 1, 1, 0.12)
+          color: Theme.border
         }
 
         // Wi-Fi -> controls pane, wifi view (toggle to close)
@@ -711,7 +701,7 @@ Item {
           anchors.verticalCenter: parent.verticalCenter
           width: 1
           height: 24
-          color: Qt.rgba(1, 1, 1, 0.12)
+          color: Theme.border
         }
 
         // Launcher pane shortcut (toggle to close); power opens session pane
@@ -719,7 +709,7 @@ Item {
           id: appsBtn
           anchors.verticalCenter: parent.verticalCenter
           text: Icons.apps
-          color: island.mode === "launcher" ? island.islandAccent : appsHover.hovered ? "#FFFFFF" : Qt.rgba(1, 1, 1, 0.65)
+          color: island.mode === "launcher" ? island.islandAccent : appsHover.hovered ? Theme.bright : Theme.muted
           font.family: Theme.fontFamily
           font.pixelSize: 15
           scale: island.expanded && appsHover.hovered ? 1.2 : 1
@@ -745,7 +735,7 @@ Item {
           id: powerBtn
           anchors.verticalCenter: parent.verticalCenter
           text: Icons.power
-          color: ShellState.sessionOpen ? island.islandAccent : powerHover.hovered ? "#FFFFFF" : Qt.rgba(1, 1, 1, 0.65)
+          color: island.mode === "session" ? island.islandAccent : powerHover.hovered ? Theme.bright : Theme.muted
           font.family: Theme.fontFamily
           font.pixelSize: 15
           scale: island.expanded && powerHover.hovered ? 1.2 : 1
@@ -800,7 +790,7 @@ Item {
                   anchors.top: parent.top
                   anchors.horizontalCenter: parent.horizontalCenter
                   text: modelData.label
-                  color: Qt.rgba(1, 1, 1, 0.4)
+                  color: Theme.muted
                   font.family: Theme.fontFamily
                   font.pixelSize: 9
                 }
@@ -840,8 +830,8 @@ Item {
         NumberAnimation { duration: island.expanded ? 140 : 90; easing.type: Easing.OutCubic }
       }
 
-      // ---------- Controls pane: quick toggles + sliders + battery,
-      // wifi/bluetooth views embed their panels directly ----------
+      // ---------- Controls pane (extracted body, same toggles/sliders
+      // + embedded wifi/bt panels) ----------
       Item {
         id: controlsPane
         anchors.fill: parent
@@ -852,202 +842,11 @@ Item {
           NumberAnimation { duration: island.expanded ? 140 : 90; easing.type: Easing.OutCubic }
         }
 
-        Column {
+        ControlsBody {
+          id: controlsBody
           anchors.fill: parent
-          spacing: 10
-          opacity: ShellState.centerView === "main" ? 1 : 0
-          visible: opacity > 0
-
-          Behavior on opacity {
-            NumberAnimation { duration: Theme.viewDuration; easing.type: Easing.OutCubic }
-          }
-
-          Row {
-            width: parent.width
-            spacing: 8
-
-            QuickToggle {
-              id: wifiToggle
-              icon: Icons.wifi
-              label: "Wi-Fi"
-              cardWidth: controlsPane.width
-              on: Networking.wifiEnabled
-              tint: Theme.accent
-              onActivated: ShellState.openCenterView("wifi")
-            }
-
-            QuickToggle {
-              icon: Icons.bluetooth
-              label: "Bluetooth"
-              cardWidth: controlsPane.width
-              on: island.btAdapter ? island.btAdapter.enabled : false
-              tint: Theme.accentSoft
-              onActivated: ShellState.openCenterView("bluetooth")
-            }
-
-            QuickToggle {
-              icon: ShellState.dnd ? Icons.bellSlash : Icons.bell
-              label: "DND"
-              cardWidth: controlsPane.width
-              on: ShellState.dnd
-              tint: Theme.critical
-              onActivated: ShellState.dnd = !ShellState.dnd
-            }
-
-            QuickToggle {
-              icon: Icons.moon
-              label: "Night"
-              cardWidth: controlsPane.width
-              on: Sys.nightLight
-              tint: Theme.accentSoft
-              onActivated: Theme.toggleNightLight()
-            }
-          }
-
-          Item {
-            width: parent.width
-            height: 44
-
-            Text {
-              anchors.top: parent.top
-              anchors.left: parent.left
-              text: "Brightness"
-              color: Theme.muted
-              font.family: Theme.fontFamily
-              font.pixelSize: 11
-            }
-
-            Text {
-              anchors.top: parent.top
-              anchors.right: parent.right
-              text: Sys.brightness + "%"
-              color: Theme.fg
-              font.family: Theme.fontFamily
-              font.pixelSize: 11
-            }
-
-            BarSlider {
-              anchors.left: parent.left
-              anchors.right: parent.right
-              anchors.bottom: parent.bottom
-              value: Sys.brightness / 100
-              onMoved: (v) => Sys.setBrightness(v * 100)
-            }
-          }
-
-          Item {
-            width: parent.width
-            height: 44
-
-            Text {
-              anchors.top: parent.top
-              anchors.left: parent.left
-              text: "Volume · " + Sys.sinkName
-              color: Theme.muted
-              font.family: Theme.fontFamily
-              font.pixelSize: 11
-              elide: Text.ElideRight
-              width: parent.width - 70
-            }
-
-            Text {
-              anchors.top: parent.top
-              anchors.right: parent.right
-              text: Sys.muted ? "Muted" : Math.round(Sys.volume * 100) + "%"
-              color: Sys.muted ? Theme.muted : Theme.fg
-              font.family: Theme.fontFamily
-              font.pixelSize: 11
-
-              MouseArea {
-                anchors.fill: parent
-                anchors.margins: -4
-                cursorShape: Qt.PointingHandCursor
-                onClicked: Sys.toggleMute()
-              }
-            }
-
-            BarSlider {
-              anchors.left: parent.left
-              anchors.right: parent.right
-              anchors.bottom: parent.bottom
-              value: Sys.volume
-              onMoved: (v) => Sys.setVolume(v)
-            }
-          }
-
-          Item {
-            width: parent.width
-            height: 34
-
-            Text {
-              anchors.left: parent.left
-              anchors.verticalCenter: parent.verticalCenter
-              text: Sys.hasBattery
-                ? (island.battGlyph + "  Battery " + island.battPct + "% · " + Sys.batteryTimeText())
-                : "No battery"
-              color: Theme.fg
-              font.family: Theme.fontFamily
-              font.pixelSize: 11
-            }
-
-            Rectangle {
-              anchors.right: parent.right
-              anchors.verticalCenter: parent.verticalCenter
-              width: profileLabel.implicitWidth + 20
-              height: 26
-              radius: Theme.radius
-              color: profileHover.hovered ? Theme.hover : "transparent"
-              border.color: Theme.border
-              border.width: 1
-
-              Behavior on color {
-                ColorAnimation { duration: Theme.hoverDuration; easing.type: Easing.OutCubic }
-              }
-
-              Text {
-                id: profileLabel
-                anchors.centerIn: parent
-                text: island.profileLabel()
-                color: Theme.accent
-                font.family: Theme.fontFamily
-                font.pixelSize: 10
-              }
-
-              HoverHandler {
-                id: profileHover
-              }
-
-              MouseArea {
-                anchors.fill: parent
-                cursorShape: Qt.PointingHandCursor
-                onClicked: island.cycleProfile()
-              }
-            }
-          }
-        }
-
-        WifiPanel {
-          anchors.fill: parent
-          visible: island.mode === "controls" && ShellState.centerView === "wifi"
-          opacity: ShellState.centerView === "wifi" ? 1 : 0
-
-          Behavior on opacity {
-            NumberAnimation { duration: Theme.viewDuration; easing.type: Easing.OutCubic }
-          }
-
-          onRequestBack: ShellState.centerBack()
-        }
-
-        BluetoothPanel {
-          anchors.fill: parent
-          visible: island.mode === "controls" && ShellState.centerView === "bluetooth"
-          opacity: ShellState.centerView === "bluetooth" ? 1 : 0
-
-          Behavior on opacity {
-            NumberAnimation { duration: Theme.viewDuration; easing.type: Easing.OutCubic }
-          }
-
-          onRequestBack: ShellState.centerBack()
+          battGlyph: island.battGlyph
+          battPct: island.battPct
         }
       }
 
@@ -1152,7 +951,7 @@ Item {
           anchors.topMargin: 8
           anchors.horizontalCenter: parent.horizontalCenter
           text: Qt.formatDateTime(new Date(), "dddd, d MMMM") + "  ·  arrows move · Home today · Esc close"
-          color: Qt.rgba(1, 1, 1, 0.45)
+          color: Theme.muted
           font.family: Theme.fontFamily
           font.pixelSize: 10
         }
@@ -1160,14 +959,15 @@ Item {
     }
   }
 
-  // Mask target: settled size + 4px margin, frozen across morphs so
-  // the Bar window Region never updates per-frame. Bar swaps between
-  // this and the dismiss layer on settle (see Bar.qml).
+  // Mask target: exact pill geometry (the Region is rectangular anyway,
+  // so no halo is needed — the pill rect already covers the arcs).
+  // Settled size, frozen across morphs; Bar swaps between this and the
+  // dismiss layer on settle (see Bar.qml).
   Item {
     id: hitBox
     anchors.horizontalCenter: parent.horizontalCenter
     anchors.top: parent.top
-    width: island.targetW + 8
-    height: island.targetH + 8
+    width: island.targetW
+    height: island.targetH
   }
 }
