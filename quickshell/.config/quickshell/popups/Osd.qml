@@ -3,8 +3,10 @@ import Quickshell
 import Quickshell.Wayland
 import ".."
 
-// Transient OSD for volume / brightness / mic changes, positioned under the
-// bar exactly where the old notify-send bubbles appeared.
+// Transient OSD — RETIRED as a window. The pill hosts OsdBody inline
+// on `islandMode === "osd"` now; `osdVisible` still fires for it, so this
+// surface stays parked to avoid a double OSD. Kept (not deleted) so
+// shell.qml's `Osd {}` instantiation keeps resolving.
 PanelWindow {
   id: osd
 
@@ -16,7 +18,7 @@ PanelWindow {
   margins.top: Theme.barMarginTop + Theme.barHeight + 14
   implicitHeight: 56
   color: "transparent"
-  visible: ShellState.osdVisible
+  visible: false
   exclusionMode: ExclusionMode.Ignore
   WlrLayershell.layer: WlrLayer.Overlay
   WlrLayershell.namespace: "quickshell-popup"

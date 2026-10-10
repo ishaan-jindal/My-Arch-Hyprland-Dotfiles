@@ -3,9 +3,15 @@ import Quickshell
 import Quickshell.Wayland
 import ".."
 
-// Top bar, one PanelWindow per monitor.
-// Geometry/font/copy tuned to match the Waybar base config:
-// height 40, margin top 10 / sides 20, three rounded islands, spacing 6.
+// Dynamic Island top bar (option B): one centered pill per monitor.
+// The pill floats flush at y=0 and hosts every popup pane inline; this
+// window is click-through except the mask (pill when collapsed, full
+// window while expanded so outside clicks dismiss), parked above windows
+// (Top layer) with no exclusive-zone reserve (ExclusionMode.Ignore —
+// mapped + parked, exclusiveZone 0). The legacy overlay windows are
+// retired (never shown). Keyboard focus is exclusive while any pill pane
+// is open so Super+C/V/R land in the pill with no manual click; Esc
+// anywhere in the bar collapses via the island trapdoor.
 Variants {
   model: Quickshell.screens
 
@@ -20,96 +26,41 @@ Variants {
         left: true
         right: true
       }
-      implicitHeight: Theme.barHeight
       margins {
-        top: Theme.barMarginTop
-        left: Theme.barMarginSide
-        right: Theme.barMarginSide
+        top: 0
+        left: 0
+        right: 0
+        bottom: 0
       }
+      implicitHeight: island.height
       color: "transparent"
-      // Default ExclusionMode.Auto reserves height + margins, exactly like
-      // the Waybar margin-top setup.
-      WlrLayershell.namespace: "quickshell-bar"
+      exclusionMode: ExclusionMode.Ignore
+      WlrLayershell.layer: WlrLayer.Top
+      WlrLayershell.namespace: "quickshell-bar" // kept: hyprland.lua layerrules match this
+      WlrLayershell.keyboardFocus: ShellState.islandMode !== "" ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
 
-      // -----------------------------------------------------------------
-      // Left island: workspaces
-      // -----------------------------------------------------------------
-      Rectangle {
-        id: leftIsland
-        anchors.left: parent.left
-        anchors.leftMargin: Theme.islandMargin
-        anchors.verticalCenter: parent.verticalCenter
-        height: parent.height
-        width: leftRow.width + 12
-        color: Theme.bg
-        border.color: Theme.border
-        border.width: 1
-        radius: Theme.radius
-
-        Row {
-          id: leftRow
-          anchors.centerIn: parent
-          spacing: Theme.barSpacing
-
-          Workspaces {
-            barScreen: bar.screen
-          }
-        }
+      mask: Region {
+        // Tight on the pill at rest (full click-through); full window
+        // while expanded OR morphing, so the Region swaps only after
+        // the morph settles — never per-frame mid-close.
+        item: (island.expanded || island.morphing) ? dismissArea : island.pillHit
       }
 
-      // -----------------------------------------------------------------
-      // Center island: clock
-      // -----------------------------------------------------------------
-      Rectangle {
-        id: centerIsland
+      // Click-outside-to-minimize: full-window transparent layer BEHIND
+      // the pill. The island above wins all pill hits, so buttons keep
+      // working; anything else in the window dismisses.
+      MouseArea {
+        id: dismissArea
+        anchors.fill: parent
+        enabled: island.expanded
+        onClicked: island.dismiss()
+      }
+
+      DynamicIsland {
+        id: island
+        barScreen: bar.screen
+        anchors.top: parent.top
         anchors.horizontalCenter: parent.horizontalCenter
-        anchors.verticalCenter: parent.verticalCenter
-        height: parent.height
-        width: centerRow.width + 12
-        color: Theme.bg
-        border.color: Theme.border
-        border.width: 1
-        radius: Theme.radius
-
-        Row {
-          id: centerRow
-          anchors.centerIn: parent
-          spacing: Theme.barSpacing
-
-          Clock {}
-        }
-      }
-
-      // -----------------------------------------------------------------
-      // Right island: status modules + tray
-      // -----------------------------------------------------------------
-      Rectangle {
-        id: rightIsland
-        anchors.right: parent.right
-        anchors.rightMargin: Theme.islandMargin
-        anchors.verticalCenter: parent.verticalCenter
-        height: parent.height
-        width: rightRow.width + 12
-        color: Theme.bg
-        border.color: Theme.border
-        border.width: 1
-        radius: Theme.radius
-
-        Row {
-          id: rightRow
-          anchors.centerIn: parent
-          spacing: Theme.barSpacing
-
-          NetWidget {}
-          Bluetooth {}
-          Audio {}
-          Cpu {}
-          Memory {}
-          Temperature {}
-          Backlight {}
-          Battery {}
-          Tray {}
-        }
       }
     }
   }

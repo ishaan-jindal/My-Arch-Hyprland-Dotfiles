@@ -305,5 +305,7 @@ hl.layer_rule({
 hl.layer_rule({
   match = { namespace = "^quickshell-bar$" },
   blur = true,
-  ignore_alpha = 0.5,
+  -- 0.18 so the island glass (alpha 0.85) still frosts; the soft fake
+  -- shadow underneath stays unblurred.
+  ignore_alpha = 0.18,
 })

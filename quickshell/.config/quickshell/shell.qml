@@ -52,6 +52,11 @@ ShellRoot {
       ShellState.toggleCenter();
     }
 
+    // qs ipc call shell toggleCalendar
+    function toggleCalendar(): void {
+      ShellState.toggleCalendar();
+    }
+
     // qs ipc call shell openCenterView wifi | bluetooth
     function openCenterView(view: string): void {
       ShellState.openCenterView(view);

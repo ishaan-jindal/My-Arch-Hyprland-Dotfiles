@@ -21,6 +21,12 @@ Singleton {
 
   // ---------------------------------------------------------------------
   // Popup visibility
+  //
+  // The pill is the single host for the control centre and the launcher:
+  // `islandMode` ("", "controls", "launcher") drives the pill pane, and
+  // the center/launcher toggles below set it. `centerOpen`/`launcherOpen`
+  // stay as legacy compat props (diagnostics, retired overlay windows) —
+  // nothing sets them true anymore.
   // ---------------------------------------------------------------------
   property bool launcherOpen: false
   property string launcherPage: "apps"
@@ -31,6 +37,7 @@ Singleton {
   property bool cheatsheetOpen: false
   property bool pickerOpen: false
   property string pickerTab: "wallpapers" // wallpapers only; kept for IPC compat
+  property string islandMode: "" // "" | "controls" | "launcher" | "picker" | "session" | "keys" | "osd" | "calendar"
 
   function closeAllPopups() {
     launcherOpen = false;
@@ -40,26 +47,25 @@ Singleton {
     cheatsheetOpen = false;
     pickerOpen = false;
     centerView = "main";
+    islandMode = "";
   }
 
   // Wallpaper picker (slide-down). `tab` is accepted for IPC compat and
   // ignored — there is only the wallpapers view; the theme follows the
   // wallpaper automatically.
   function togglePicker(tab) {
-    if (pickerOpen) {
-      pickerOpen = false;
+    if (islandMode === "picker") {
+      islandMode = "";
       return;
     }
+    closeAllPopups();
     pickerTab = "wallpapers";
-    launcherOpen = false;
-    sessionOpen = false;
-    centerOpen = false;
-    cheatsheetOpen = false;
-    pickerOpen = true;
+    islandMode = "picker";
   }
 
-  // Toggle the launcher. `apps` (default) or `clipboard`; the legacy
-  // themes/wallpapers pages now live in the slide-down picker instead.
+  // Toggle the launcher pill pane. `apps` (default) or `clipboard`;
+  // the legacy themes/wallpapers pages now live in the slide-down picker
+  // instead. Re-selecting the open page collapses the pill.
   function toggleLauncher(page) {
     let wantPage = (page !== undefined && page !== "") ? page : "apps";
     if (wantPage === "themes" || wantPage === "wallpapers") {
@@ -68,70 +74,88 @@ Singleton {
     }
     if (wantPage !== "clipboard")
       wantPage = "apps";
-    if (launcherOpen) {
-      // already open on another page -> switch page, stay open
-      if (launcherPage !== wantPage) {
-        launcherPage = wantPage;
-        sessionOpen = false;
-        centerOpen = false;
-        return;
-      }
-      launcherOpen = false;
+    if (islandMode === "launcher" && launcherPage === wantPage) {
+      islandMode = "";
       return;
     }
+    closeAllPopups();
     launcherPage = wantPage;
-    sessionOpen = false;
-    centerOpen = false;
-    launcherOpen = true;
+    islandMode = "launcher";
   }
 
   function toggleSession() {
-    const wasOpen = sessionOpen;
+    if (islandMode === "session") {
+      islandMode = "";
+      return;
+    }
     closeAllPopups();
-    if (!wasOpen)
-      sessionOpen = true;
+    islandMode = "session";
   }
 
   function toggleCenter() {
-    const wasOpen = centerOpen;
-    closeAllPopups();
-    if (!wasOpen) {
-      centerView = "main";
-      centerOpen = true;
+    if (islandMode === "controls" && centerView === "main") {
+      islandMode = "";
+      return;
     }
-  }
-
-  // Open the control centre on a specific view (main | wifi | bluetooth).
-  function openCenterView(view) {
     closeAllPopups();
-    centerView = (view === "wifi" || view === "bluetooth") ? view : "main";
-    centerOpen = true;
+    centerView = "main";
+    islandMode = "controls";
   }
 
-  // Open the control centre on the main view, scrolled to + highlighting the
-  // given section (system | display | power | audio | calendar). Bar widgets
-  // deep-link through this instead of just popping the panel open.
+  // Toggle the pill calendar pane. Re-selecting collapses.
+  function toggleCalendar() {
+    if (islandMode === "calendar") {
+      islandMode = "";
+      return;
+    }
+    closeAllPopups();
+    islandMode = "calendar";
+  }
+
+  // Open the pill control pane on a specific view (main | wifi |
+  // bluetooth). Re-selecting the open view collapses the pill.
+  function openCenterView(view) {
+    const want = (view === "wifi" || view === "bluetooth") ? view : "main";
+    if (islandMode === "controls" && centerView === want) {
+      islandMode = "";
+      return;
+    }
+    closeAllPopups();
+    centerView = want;
+    islandMode = "controls";
+  }
+
+  // Open the pill control pane on the main view for the given section
+  // (system | display | power | audio | calendar). Pill shortcuts
+  // deep-link through this instead of just popping the pane open.
+  // Re-selecting the open section collapses the pill.
   function openCenterSection(section) {
+    if (islandMode === "controls" && centerView === "main" && centerSection === section) {
+      islandMode = "";
+      return;
+    }
     closeAllPopups();
     centerView = "main";
     centerSection = section;
-    centerOpen = true;
+    islandMode = "controls";
   }
 
-  // Esc inside the control centre: leave a sub-view, else close.
+  // Esc/back inside the pill control pane: leave a sub-view, else close.
   function centerBack() {
     if (centerView !== "main") {
       centerView = "main";
       return;
     }
-    centerOpen = false;
+    islandMode = "";
   }
 
   function toggleCheatsheet() {
-    const wasOpen = cheatsheetOpen;
+    if (islandMode === "keys") {
+      islandMode = "";
+      return;
+    }
     closeAllPopups();
-    if (!wasOpen)
-      cheatsheetOpen = true;
+    islandMode = "keys";
   }
 
   // ---------------------------------------------------------------------
@@ -145,7 +169,11 @@ Singleton {
   Timer {
     id: osdTimer
     interval: 1600
-    onTriggered: root.osdVisible = false
+    onTriggered: {
+      root.osdVisible = false;
+      if (root.islandMode === "osd")
+        root.islandMode = "";
+    }
   }
 
   function showOsd(kind, value, text) {
@@ -153,6 +181,9 @@ Singleton {
     osdValue = Math.max(0, Math.min(1, value));
     osdText = text !== undefined ? text : Math.round(value * 100) + "%";
     osdVisible = true;
+    // OSD takes the pill only when it is free; never hijack an open pane.
+    if (islandMode === "")
+      islandMode = "osd";
     osdTimer.restart();
   }
 }
