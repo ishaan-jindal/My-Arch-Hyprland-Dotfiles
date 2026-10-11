@@ -17,7 +17,9 @@ Rectangle {
     LayoutMirroring.enabled: Qt.locale().textDirection == Qt.RightToLeft
     LayoutMirroring.childrenInherit: true
 
-    property int sessionIndex: sessionBox.index
+    // Single-session greeter: Hyprland only. SessionName wins when the
+    // deployed theme.conf sets it, then autodetect, then lastIndex.
+    property string sessionName: config.SessionName ? config.SessionName : "hyprland"
     // Single-user greeter: no username picker. FixedUser wins when the
     // deployed theme.conf sets it, then the last login name, then "sacred".
     property string fixedUser: config.FixedUser ? config.FixedUser : (userModel.lastUser ? userModel.lastUser : "sacred")
@@ -45,7 +47,20 @@ Rectangle {
 
     function doLogin() {
         errorMessage.text = ""
-        sddm.login(root.fixedUser, passField.text, sessionIndex)
+        sddm.login(root.fixedUser, passField.text, root.resolveSessionIndex())
+    }
+
+    // Session roles are only readable inside a delegate, so a hidden
+    // Instantiator mirrors Name/File per row for the lookup below.
+    function resolveSessionIndex() {
+        var want = root.sessionName.toLowerCase()
+        for (var i = 0; i < sessionProbe.count; i++) {
+            var o = sessionProbe.objectAt(i)
+            if (o && ((o.probeName + " " + o.probeFile).toLowerCase().indexOf(want) !== -1)) {
+                return i
+            }
+        }
+        return sessionModel.lastIndex
     }
 
     function updateClock() {
@@ -341,7 +356,7 @@ Rectangle {
                         radius: root.cornerRadius
                         font.family: root.fontName
                         font.pointSize: 11
-                        KeyNavigation.tab: sessionBox
+                        KeyNavigation.tab: loginButton
                         Keys.onPressed: function (event) {
                             if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
                                 root.doLogin()
@@ -374,26 +389,39 @@ Rectangle {
                 text: textConstants.session
             }
 
-            ComboBox {
-                id: sessionBox
-                // Raised so its downward dropdown paints above the login
-                // button and footer row.
-                z: 10
+            // Fixed session: status-dot + name microcopy, no picker.
+            RowLayout {
                 Layout.fillWidth: true
-                Layout.preferredHeight: 34
+                spacing: 10
+
+                Rectangle {
+                    Layout.preferredWidth: 6
+                    Layout.preferredHeight: 6
+                    Layout.alignment: Qt.AlignVCenter
+                    radius: 3
+                    color: root.accentColor
+                    opacity: 0.8
+                }
+
+                Text {
+                    Layout.fillWidth: true
+                    elide: Text.ElideRight
+                    color: root.mainColor
+                    font.family: root.fontName
+                    font.pointSize: 12
+                    text: root.sessionName.charAt(0).toUpperCase() + root.sessionName.slice(1)
+                }
+            }
+
+            // Hidden role probe for resolveSessionIndex(): session Name/File
+            // roles are unreadable from QML outside a delegate.
+            Instantiator {
+                id: sessionProbe
                 model: sessionModel
-                index: sessionModel.lastIndex
-                color: "transparent"
-                borderColor: root.mutedColor
-                focusColor: root.accentColor
-                hoverColor: root.accentColor
-                menuColor: root.fieldColor
-                textColor: root.mainColor
-                arrowColor: root.accentColor
-                font.family: root.fontName
-                font.pointSize: 11
-                KeyNavigation.backtab: passField
-                KeyNavigation.tab: loginButton
+                delegate: QtObject {
+                    property string probeName: model.name
+                    property string probeFile: model.file
+                }
             }
 
             Rectangle {
@@ -424,7 +452,7 @@ Rectangle {
                     onClicked: root.doLogin()
                 }
 
-                KeyNavigation.backtab: sessionBox
+                KeyNavigation.backtab: passField
                 Keys.onPressed: function (event) {
                     if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter || event.key === Qt.Key_Space) {
                         root.doLogin()

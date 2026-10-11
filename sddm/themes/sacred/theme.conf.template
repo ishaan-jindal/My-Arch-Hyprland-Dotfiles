@@ -15,6 +15,7 @@ FieldColor={{ colors.surface.dark.hex }}
 CriticalColor={{ term1.hex }}
 LoginTextColor={{ vibrant_on.hex }}
 FixedUser=sacred
+SessionName=hyprland
 AvatarFile=avatar.jpg
 Font=JetBrainsMono Nerd Font
 FontSize=13

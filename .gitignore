@@ -9,3 +9,5 @@ hypr/.config/hypr/hyprlock.conf
 # Tooling caches (ruff, python bytecode from scripts/lib and limine/scripts).
 .ruff_cache/
 __pycache__/
+# Local agent tooling (screenshots, session artifacts).
+.opencode/
