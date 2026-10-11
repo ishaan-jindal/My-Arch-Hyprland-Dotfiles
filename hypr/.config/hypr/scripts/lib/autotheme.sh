@@ -5,8 +5,10 @@
 #   wallpaper file -> matugen (dark-only Material You) -> ~/.cache/autotheme.json
 #   -> Quickshell Theme.qml (watches the file) + fixed dark GTK + Limine sync.
 #
-# ASSETS_DIR..FONT_NAME below are the lib's interface, consumed by the
-# sourcing scripts (wallpaper_switch.sh, restore_wallpaper.sh).
+# ASSETS_DIR..FONT_NAME plus SDDM_TEMPLATE/SDDM_STAGED below are the lib's
+# interface, consumed by the sourcing scripts (wallpaper_switch.sh,
+# restore_wallpaper.sh). SDDM_TEMPLATE derives from $REPO_ROOT, which each
+# sourcing script sets before sourcing this lib.
 # shellcheck disable=SC2034
 
 ASSETS_DIR="$HOME/.config/hypr/themes/wallpapers/assets"
@@ -19,6 +21,8 @@ GHOSTTY_TEMPLATE="$HOME/.config/hypr/scripts/templates/ghostty-theme"
 GHOSTTY_THEME="$HOME/.config/ghostty/themes/autotheme"
 HYPLOCK_TEMPLATE="$HOME/.config/hypr/hyprlock.conf.template"
 HYPLOCK_CONF="$HOME/.config/hypr/hyprlock.conf"
+SDDM_TEMPLATE="${REPO_ROOT:-}/sddm/themes/sacred/theme.conf.template"
+SDDM_STAGED="$HOME/.cache/sddm-sacred-theme.conf"
 GTK3_TEMPLATE="$HOME/.config/hypr/scripts/templates/gtk3.css"
 GTK3_CSS="$HOME/.config/gtk-3.0/gtk.css"
 GTK4_TEMPLATE="$HOME/.config/hypr/scripts/templates/gtk4.css"
@@ -225,6 +229,7 @@ write_all_fallbacks() {
     write_fallback_autotheme "$wall"
     write_ghostty_theme_neutral
     render_template_fallback "$HYPLOCK_TEMPLATE" "$HYPLOCK_CONF" || true
+    render_template_fallback "$SDDM_TEMPLATE" "$SDDM_STAGED" || true
     render_template_fallback "$GTK3_TEMPLATE" "$GTK3_CSS" || true
     render_template_fallback "$GTK4_TEMPLATE" "$GTK4_CSS" || true
     reload_ghostty
@@ -369,6 +374,9 @@ post_hook = "pkill -SIGUSR2 ghostty"
 [templates.hyprlock]
 input_path = "$HYPLOCK_TEMPLATE"
 output_path = "$HYPLOCK_CONF"
+[templates.sddm]
+input_path = "$SDDM_TEMPLATE"
+output_path = "$SDDM_STAGED"
 [templates.gtk3]
 input_path = "$GTK3_TEMPLATE"
 output_path = "$GTK3_CSS"
@@ -377,12 +385,14 @@ input_path = "$GTK4_TEMPLATE"
 output_path = "$GTK4_CSS"
 EOF
         mkdir -p "$(dirname "$AUTOTHEME_JSON")" "$(dirname "$GHOSTTY_THEME")" \
-            "$(dirname "$HYPLOCK_CONF")" "$(dirname "$GTK3_CSS")" "$(dirname "$GTK4_CSS")"
+            "$(dirname "$HYPLOCK_CONF")" "$(dirname "$SDDM_STAGED")" \
+            "$(dirname "$GTK3_CSS")" "$(dirname "$GTK4_CSS")"
         if matugen image "$src" --mode dark --config "$tmpcfg" \
                 --import-json "$vib" >/dev/null 2>&1 \
             && autotheme_valid && [ -f "$GHOSTTY_THEME" ] \
-            && [ -f "$HYPLOCK_CONF" ] && [ -f "$GTK3_CSS" ] && [ -f "$GTK4_CSS" ] \
-            && ! grep -q '{{' "$HYPLOCK_CONF" "$GTK3_CSS" "$GTK4_CSS" "$GHOSTTY_THEME" \
+            && [ -f "$HYPLOCK_CONF" ] && [ -f "$SDDM_STAGED" ] \
+            && [ -f "$GTK3_CSS" ] && [ -f "$GTK4_CSS" ] \
+            && ! grep -q '{{' "$HYPLOCK_CONF" "$SDDM_STAGED" "$GTK3_CSS" "$GTK4_CSS" "$GHOSTTY_THEME" \
                 "$AUTOTHEME_JSON" 2>/dev/null; then
             # matugen records its actual input in {{image}} — for videos
             # that is the temp frame, so pin the real wallpaper path.

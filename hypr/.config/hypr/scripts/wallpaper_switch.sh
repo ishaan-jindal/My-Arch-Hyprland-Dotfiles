@@ -23,6 +23,7 @@ SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_SRC")" && pwd)"
 # this script's real path so the checkout can live anywhere.
 REPO_ROOT="$(cd "$SCRIPT_DIR/../../../.." 2>/dev/null && pwd)"
 LIMINE_SYNC="$REPO_ROOT/limine/scripts/limine-sync"
+SDDM_SYNC="$REPO_ROOT/sddm/scripts/sddm-sync"
 # shellcheck source=lib/wallpaper.sh
 . "$SCRIPT_DIR/lib/wallpaper.sh"
 # shellcheck source=lib/autotheme.sh
@@ -54,6 +55,7 @@ apply_wallpaper() {
     [ -f "$WALL_STATE" ] && prev="$(cat "$WALL_STATE")"
     if [ "$prev" = "$full" ] && autotheme_valid && [ -f "$GHOSTTY_THEME" ]; then
         "$LIMINE_SYNC" >/dev/null 2>&1 || true
+        "$SDDM_SYNC" >/dev/null 2>&1 || true
         return 0
     fi
 
@@ -65,6 +67,8 @@ apply_wallpaper() {
 
     # keep the Limine boot menu in sync (best effort; needs the sudoers rule)
     "$LIMINE_SYNC" >/dev/null 2>&1 || true
+    # same for the SDDM greeter (best effort; needs the sudoers rule)
+    "$SDDM_SYNC" >/dev/null 2>&1 || true
 }
 
 # ----------------------

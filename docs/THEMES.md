@@ -37,16 +37,30 @@ Selecting one runs `wallpaper_switch.sh apply <path>`, which in a single
      lock-screen input ring + check color on next lock
    - `~/.config/gtk-3.0/gtk.css` + `~/.config/gtk-4.0/gtk.css` → GTK
      selection/accent colors on app restart
+   - `~/.cache/sddm-sacred-theme.conf` (from
+     `sddm/themes/sacred/theme.conf.template`) → staged SDDM greeter
+     palette, deployed to `/usr/share/sddm/themes/sacred/theme.conf` +
+     wallpaper copy by `sddm-deploy` (best effort, needs the sudoers rule)
 5. Applies Hyprland window borders live (`col.active_border` = accent,
    `col.inactive_border` = surface tint) via `hyprctl eval`.
 6. Syncs the fixed dark GTK furniture (`Orchis-Dark`, `Papirus-Dark`,
-   `Bibata-Modern-Classic`, `prefer-dark`) and the Limine boot menu (best
-   effort, needs the sudoers rule). Note: the root-owned copy must match
-   the repo — after pulling a `limine-deploy` change, reinstall it:
+   `Bibata-Modern-Classic`, `prefer-dark`), the Limine boot menu and the
+   SDDM greeter (best effort, each needs its sudoers rule). Note: the
+   root-owned copies must match the repo — after pulling a `limine-deploy` change, reinstall it:
 
    ```bash
    sudo install -m755 ~/dotfiles/limine/scripts/limine-deploy /usr/local/bin/limine-deploy
    sudo /usr/local/bin/limine-deploy
+   sudo install -m755 ~/dotfiles/sddm/scripts/sddm-deploy /usr/local/bin/sddm-deploy
+   sudo install -m440 ~/dotfiles/sddm/scripts/sudoers-sddm /etc/sudoers.d/10-sddm
+   sudo visudo -c && sudo /usr/local/bin/sddm-deploy --install
+   ```
+
+   The greeter itself is selected via a drop-in (leaves `/etc/sddm.conf`
+   untouched):
+
+   ```bash
+   printf '[Theme]\nCurrent=sacred\n' | sudo tee /etc/sddm.conf.d/10-theme.conf
    ```
 
 The generated layer is fully derived: `~/.cache/autotheme.json` carries
@@ -101,6 +115,8 @@ until then.
 - `~/.cache/wallpaper_state` — absolute path of the current wallpaper
 - `~/.cache/autotheme.json` — generated dark palette (read by Quickshell
   and `limine-deploy`)
+- `~/.cache/sddm-sacred-theme.conf` — staged SDDM `theme.conf` (deployed
+  with the wallpaper copy by `sddm-deploy`)
 
 The script is CLI-friendly too:
 

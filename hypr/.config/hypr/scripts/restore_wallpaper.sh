@@ -4,6 +4,11 @@
 set -u
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# Repo checkout root (hypr/.config/hypr/scripts → up 4 levels), derived from
+# this script's real path so the checkout can live anywhere. Needed by
+# lib/autotheme.sh for the sddm template path.
+# shellcheck disable=SC2034
+REPO_ROOT="$(cd "$SCRIPT_DIR/../../../.." 2>/dev/null && pwd)"
 # shellcheck source=lib/autotheme.sh
 . "$SCRIPT_DIR/lib/autotheme.sh"
 
@@ -31,7 +36,7 @@ ln -s "$wall" "$CURRENT_LINK"
 # the cache survives reboots, but regenerate if it was wiped, corrupted,
 # or any generated file is missing (fresh clone, new template added)
 if ! autotheme_valid || [ ! -f "$GHOSTTY_THEME" ] || [ ! -f "$HYPLOCK_CONF" ] \
-    || [ ! -f "$GTK3_CSS" ] || [ ! -f "$GTK4_CSS" ]; then
+    || [ ! -f "$SDDM_STAGED" ] || [ ! -f "$GTK3_CSS" ] || [ ! -f "$GTK4_CSS" ]; then
     ensure_thumb "$wall"
     generate_autotheme "$wall" || true
 fi

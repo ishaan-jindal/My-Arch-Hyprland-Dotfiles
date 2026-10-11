@@ -39,6 +39,7 @@ This repository includes:
 ├── gtk/        # GTK seed settings (overwritten by the wallpaper script)
 ├── xdg-portal/ # Portal preferences (gtk file picker + hyprland screencast)
 ├── limine/     # Boot menu theme sync scripts + assets
+├── sddm/       # SDDM greeter theme + sync scripts (manual deploy, like limine/)
 ├── docs/       # Quick start, themes, keybindings, quickshell
 ├── install.sh  # Arch bootstrap script
 └── README.md

@@ -1,0 +1,131 @@
+#!/usr/bin/env bash
+# Deploy/sync the sacred SDDM theme: palette + wallpaper.
+#
+# Installed root-owned at /usr/local/bin/sddm-deploy, invoked as root:
+#   sudo sddm-deploy            # sync static files + staged theme.conf + wallpaper
+#   sudo sddm-deploy --install  # also (re)generate the fallback background
+#
+# The palette arrives staged at ~/.cache/sddm-sacred-theme.conf (rendered by
+# wallpaper_switch.sh via matugen). The greeter runs as the sddm user and
+# cannot read $HOME, so the wallpaper is converted to a world-readable
+# background.jpg and the avatar (~/Documents/cat.jpg) to a world-readable
+# avatar.jpg inside the theme dir. Never leaves the theme broken:
+# invalid staged configs and failed conversions keep the previous files.
+#
+# Safety: the wallpaper must resolve inside the Hyprland wallpaper assets
+# directory, so the passwordless sudoers rule for the no-argument form cannot
+# be used to inject arbitrary config content or copy arbitrary files.
+set -euo pipefail
+
+[ "$(id -u)" -eq 0 ] || { echo "sddm-deploy: must run as root" >&2; exit 1; }
+
+THEME_DST=/usr/share/sddm/themes/sacred
+# Invoking user's home (this script runs as root via sudo): prefer
+# $SUDO_USER, then $USER/logname; override the checkout with $DOTFILES_DIR.
+_TARGET_USER="${SUDO_USER:-${USER:-}}"
+if [ -z "$_TARGET_USER" ] || [ "$_TARGET_USER" = "root" ]; then
+    _TARGET_USER="$(logname 2>/dev/null || echo sacred)"
+fi
+_TARGET_HOME="$(getent passwd "$_TARGET_USER" 2>/dev/null | cut -d: -f6)"
+[ -n "$_TARGET_HOME" ] || _TARGET_HOME="/home/$_TARGET_USER"
+DOTFILES_DIR="${DOTFILES_DIR:-$_TARGET_HOME/dotfiles}"
+THEME_SRC="$DOTFILES_DIR/sddm/themes/sacred"
+WALLPAPER_LINK="$_TARGET_HOME/.config/hypr/themes/wallpapers/current"
+STAGED="$_TARGET_HOME/.cache/sddm-sacred-theme.conf"
+
+install_static() {
+    install -d "$THEME_DST"
+    install -m644 "$THEME_SRC/Main.qml" "$THEME_DST/Main.qml"
+    install -m644 "$THEME_SRC/metadata.desktop" "$THEME_DST/metadata.desktop"
+    echo "sddm-deploy: theme files installed"
+}
+
+sync_conf() {
+    if [ ! -s "$STAGED" ]; then
+        echo "sddm-deploy: no staged theme, keeping previous theme.conf" >&2
+        return 0
+    fi
+    if ! grep -q '^\[General\]' "$STAGED" || grep -q '{{' "$STAGED"; then
+        echo "sddm-deploy: invalid staged theme, keeping previous theme.conf" >&2
+        return 0
+    fi
+    install -m644 "$STAGED" "$THEME_DST/theme.conf"
+    echo "sddm-deploy: theme.conf synced"
+}
+
+convert_bg() {
+    local src="$1" dst="$2"
+    case "${src,,}" in
+        *.jpg|*.jpeg|*.png)
+            magick "$src" -auto-orient -resize '1920x1080^' -gravity center \
+                -extent 1920x1080 -colorspace sRGB -quality 84 -strip "$dst" ;;
+        *.gif|*.mp4|*.mkv|*.webm)
+            local frame
+            frame="$(mktemp --suffix=.png)"
+            if ffmpeg -v error -y -ss 5 -i "$src" -frames:v 1 \
+                -vf "scale=1920:1080:force_original_aspect_ratio=increase,crop=1920:1080" \
+                -q:v 2 "$frame"; then
+                magick "$frame" -quality 84 -strip "$dst"
+            fi
+            rm -f "$frame" ;;
+        *) return 1 ;;
+    esac
+}
+
+sync_avatar() {
+    local src="$_TARGET_HOME/Documents/cat.jpg" tmp resolved
+    [ -f "$src" ] || return 0
+    # Safety: the avatar must resolve inside the target home, so the
+    # passwordless sudoers rule for the no-argument form cannot be used to
+    # copy arbitrary files (same rationale as the wallpaper asset-dir guard).
+    resolved="$(readlink -f "$src" 2>/dev/null || true)"
+    [[ "$resolved" == "$_TARGET_HOME"/* && -f "$resolved" ]] || {
+        echo "sddm-deploy: avatar outside target home, skipping" >&2
+        return 0
+    }
+    tmp="$(mktemp --suffix=.jpg)"
+    if magick "$resolved" -auto-orient -thumbnail '256x256^' -gravity center \
+        -extent 256x256 -colorspace sRGB -strip "$tmp"; then
+        install -m644 "$tmp" "$THEME_DST/avatar.jpg"
+        echo "sddm-deploy: avatar -> avatar.jpg"
+    fi
+    rm -f "$tmp"
+}
+sync_wallpaper() {
+    local cur base tmp
+    cur="$(readlink -f "$WALLPAPER_LINK" 2>/dev/null || true)"
+    base="$(readlink -f "$_TARGET_HOME/.config/hypr/themes/wallpapers/assets" 2>/dev/null || true)"
+    [ -n "$cur" ] && [ -n "$base" ] || return 0
+    [[ "$cur" == "$base"/* && -f "$cur" ]] || {
+        echo "sddm-deploy: wallpaper outside asset dir, skipping" >&2
+        return 0
+    }
+    tmp="$(mktemp --suffix=.jpg)"
+    if convert_bg "$cur" "$tmp"; then
+        install -m644 "$tmp" "$THEME_DST/background.jpg"
+        echo "sddm-deploy: current wallpaper -> background.jpg"
+    fi
+    rm -f "$tmp"
+}
+
+install_fallback() {
+    [ -f "$THEME_DST/fallback.jpg" ] && [ "${1:-}" != "--install" ] && return 0
+    if command -v magick >/dev/null 2>&1; then
+        magick -size 1920x1080 'xc:#14161c' -quality 82 "$THEME_DST/fallback.jpg"
+        chmod 644 "$THEME_DST/fallback.jpg"
+        echo "sddm-deploy: fallback background written"
+    fi
+}
+
+if [ "${1:-}" = "--install" ]; then
+    :
+elif [ -n "${1:-}" ]; then
+    echo "sddm-deploy: unknown argument '$1'" >&2
+    exit 2
+fi
+
+install_static
+sync_conf
+sync_wallpaper
+sync_avatar
+install_fallback "${1:-}"

@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+# Keep the sacred SDDM theme in sync with the generated autotheme.
+# Runs automatically on every wallpaper apply through the passwordless
+# sudoers rule (/etc/sudoers.d/10-sddm); failures are logged to
+# ~/.cache/sddm-sync.log and surfaced once via notify-send.
+set -u
+
+LOG="$HOME/.cache/sddm-sync.log"
+
+# Capture locally (the log lives in $HOME, owned by the user).
+out="$(sudo -n /usr/local/bin/sddm-deploy 2>&1)"
+ec=$?
+printf '%s\n' "$out" >"$LOG"
+[ "$ec" -eq 0 ] && exit 0
+
+if command -v notify-send >/dev/null 2>&1; then
+    notify-send "SDDM" "Greeter sync failed — see ~/.cache/sddm-sync.log" || true
+fi
+echo "sddm-sync: failed, see $LOG" >&2
+tail -n 5 "$LOG" >&2 || true
+exit 1
