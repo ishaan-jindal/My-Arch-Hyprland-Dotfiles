@@ -12,7 +12,7 @@ Item {
   readonly property var actions: [
     { key: "l", icon: Icons.lock, label: "Lock", cmd: ["hyprlock"] },
     { key: "h", icon: Icons.snowflake, label: "Hibernate", cmd: ["systemctl", "hibernate"] },
-    { key: "e", icon: Icons.logout, label: "Logout", cmd: ["hyprctl", "dispatch", "exit 0"] },
+    { key: "e", icon: Icons.logout, label: "Logout", cmd: ["hyprctl", "dispatch", "hl.dsp.exit()"] },
     { key: "s", icon: Icons.power, label: "Shutdown", cmd: ["systemctl", "poweroff"] },
     { key: "u", icon: Icons.moon, label: "Suspend", cmd: ["systemctl", "suspend"] },
     { key: "r", icon: Icons.reboot, label: "Reboot", cmd: ["systemctl", "reboot"] }

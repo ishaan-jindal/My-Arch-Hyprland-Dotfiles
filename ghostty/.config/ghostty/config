@@ -1,6 +1,7 @@
 # Generated per-wallpaper by wallpaper_switch.sh (matugen) — see docs/THEMES.md.
 # Missing until the first wallpaper apply; ghostty uses its default meanwhile.
 theme = autotheme
+background-opacity = 0.9
 shell-integration = fish
 window-save-state = never
 working-directory = home
