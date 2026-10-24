@@ -41,6 +41,7 @@ hl.on("hyprland.start", function()
   hl.exec_cmd("wl-paste --type text --watch cliphist store")
   hl.exec_cmd("wl-paste --type image --watch cliphist store")
   hl.exec_cmd("sleep 0.5 && ~/.config/hypr/scripts/restore_wallpaper.sh")
+  hl.exec_cmd("~/.config/hypr/scripts/wallpaper_cycle.sh")
 end)
 
 
@@ -224,6 +225,8 @@ hl.bind(mainMod .. " + V", hl.dsp.exec_cmd("qs ipc call shell openLauncher clipb
 
 -- Wallpaper picker (slide-down widget, auto-themes the desktop)
 hl.bind(mainMod .. " + T", hl.dsp.exec_cmd("qs ipc call shell openPicker wallpapers"))
+-- Wallpaper auto-cycle toggle (random pick every WALLPAPER_CYCLE_INTERVAL)
+hl.bind(mainMod .. " + SHIFT + T", hl.dsp.exec_cmd("~/.config/hypr/scripts/wallpaper_cycle.sh toggle"))
 
 -- Quickshell shell control
 hl.bind(mainMod .. " + C", hl.dsp.exec_cmd("qs ipc call shell toggleCenter"))

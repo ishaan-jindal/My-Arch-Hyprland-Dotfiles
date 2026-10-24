@@ -21,6 +21,7 @@ Main modifier: `SUPER`
   widgets deep-link straight to their section)
 - `Super + V` → clipboard history
 - `Super + T` → wallpaper picker (theme follows the wallpaper automatically)
+- `Super + Shift + T` → toggle wallpaper auto-cycle (random pick every 10 min)
 - `Super + K` → keybind cheatsheet
 - `Super + Shift + K` → stop Quickshell
 - `Super + Shift + W` → start Quickshell

@@ -3,6 +3,7 @@
 #
 # Usage:
 #   wallpaper_switch.sh apply <name-or-path>  # any image/video file
+#   wallpaper_switch.sh random                # random asset (avoids repeat)
 #   wallpaper_switch.sh list-json             # JSON array of assets dir (for Quickshell)
 #   wallpaper_switch.sh ensure-thumbs         # backfill missing video/GIF thumbs + bridge stills
 #
@@ -30,7 +31,7 @@ SDDM_SYNC="$REPO_ROOT/sddm/scripts/sddm-sync"
 . "$SCRIPT_DIR/lib/autotheme.sh"
 
 usage() {
-    echo "usage: $(basename "$0") apply <name-or-path> | list-json | ensure-thumbs" >&2
+    echo "usage: $(basename "$0") apply <name-or-path> | random | list-json | ensure-thumbs" >&2
 }
 
 # ----------------------
@@ -69,6 +70,37 @@ apply_wallpaper() {
     "$LIMINE_SYNC" >/dev/null 2>&1 || true
     # same for the SDDM greeter (best effort; needs the sudoers rule)
     "$SDDM_SYNC" >/dev/null 2>&1 || true
+}
+
+# ----------------------
+# random: apply a random asset, avoiding an immediate repeat when
+# alternatives exist. $RANDOM, no new dependencies.
+# ----------------------
+random_wallpaper() {
+    [ -d "$ASSETS_DIR" ] || {
+        notify_err "Wallpaper Error" "No assets dir: $ASSETS_DIR"
+        return 1
+    }
+    local prev=""
+    [ -f "$WALL_STATE" ] && prev="$(cat "$WALL_STATE")"
+    local find_args=("$ASSETS_DIR" -maxdepth 1 -type f
+        \( -iname '*.jpg' -o -iname '*.jpeg' -o -iname '*.png' -o -iname '*.gif'
+        -o -iname '*.mp4' -o -iname '*.mkv' -o -iname '*.webm' \))
+    local files=()
+    while IFS= read -r -d '' f; do
+        [ "$f" != "$prev" ] || continue
+        files+=("$f")
+    done < <(find "${find_args[@]}" -print0)
+    if [ "${#files[@]}" -eq 0 ]; then
+        while IFS= read -r -d '' f; do
+            files+=("$f")
+        done < <(find "${find_args[@]}" -print0)
+    fi
+    [ "${#files[@]}" -gt 0 ] || {
+        notify_err "Wallpaper Error" "No wallpapers in $ASSETS_DIR"
+        return 1
+    }
+    apply_wallpaper "${files[RANDOM % ${#files[@]}]}"
 }
 
 # ----------------------
@@ -121,6 +153,9 @@ case "$command" in
             exit 1
         fi
         apply_wallpaper "$2"
+        ;;
+    random)
+        random_wallpaper
         ;;
     list-json)
         list_json
