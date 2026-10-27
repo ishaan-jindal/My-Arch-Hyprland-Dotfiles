@@ -41,7 +41,6 @@ hl.on("hyprland.start", function()
   hl.exec_cmd("wl-paste --type text --watch cliphist store")
   hl.exec_cmd("wl-paste --type image --watch cliphist store")
   hl.exec_cmd("sleep 0.5 && ~/.config/hypr/scripts/restore_wallpaper.sh")
-  hl.exec_cmd("~/.config/hypr/scripts/wallpaper_cycle.sh")
 end)
 
 
