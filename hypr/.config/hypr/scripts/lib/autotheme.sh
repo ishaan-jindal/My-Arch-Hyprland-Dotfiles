@@ -38,7 +38,7 @@ GTK_THEME="Orchis-Dark"
 ICON_THEME="Papirus-Dark"
 CURSOR_THEME="Bibata-Modern-Classic"
 CURSOR_SIZE=24
-FONT_NAME="JetBrainsMono Nerd Font Mono 12"
+FONT_NAME="Inter 11"
 
 notify_err() {
     if command -v notify-send >/dev/null 2>&1; then
