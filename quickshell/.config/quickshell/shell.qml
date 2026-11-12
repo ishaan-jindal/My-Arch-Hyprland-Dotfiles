@@ -6,11 +6,13 @@ import Quickshell.Networking
 import Quickshell.Bluetooth
 import "components"
 import "popups"
+import "island" as Isle
 
 // Quickshell entry point. See docs/QUICKSHELL.md.
 ShellRoot {
   Bar {}
-  NotificationPopups {}
+  // NotificationPopups retired: notifications now render in the island
+  // (one-at-a-time + queue, hover-pause, click=default action). File kept.
 
   IpcHandler {
     target: "shell"
@@ -116,6 +118,32 @@ ShellRoot {
     // qs ipc call shell showOsd volume 0.42
     function showOsd(kind: string, value: real): void {
       ShellState.showOsd(kind, value, Math.round(value * 100) + "%");
+    }
+  }
+
+  IpcHandler {
+    target: "island"
+
+    // qs ipc call island toggle  (collapse, or open the hub)
+    function toggle(): void {
+      Isle.IslandState.toggle();
+    }
+
+    // qs ipc call island open hub  (hub | media force open; anything
+    // else releases overrides and lets the live state show through)
+    function open(state: string): void {
+      Isle.IslandState.open(state);
+    }
+
+    // qs ipc call island hide  (back to idle, dismissing overlays)
+    function hide(): void {
+      Isle.IslandState.hide();
+    }
+
+    // qs ipc call island demo notification  (idle | activity | toast |
+    // notification | urgent | media | hub — fake data, auto-clears)
+    function demo(state: string): void {
+      Isle.IslandState.demo(state);
     }
   }
 }

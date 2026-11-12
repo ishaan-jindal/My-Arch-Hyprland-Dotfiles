@@ -2,19 +2,19 @@ import QtQuick
 import Quickshell
 import Quickshell.Wayland
 import Quickshell.Hyprland
+import "../island" as Isle
 import ".."
 
-// Dynamic Island top bar (option B): one centered pill per monitor.
-// The pill floats flush at y=0 and hosts every popup pane inline; this
-// window is click-through except the mask (pill when collapsed, full
-// window while expanded so outside clicks dismiss), parked above windows
-// (Top layer) with no exclusive-zone reserve (ExclusionMode.Ignore —
-// mapped + parked, exclusiveZone 0). The legacy overlay windows are
-// retired (never shown). Keyboard focus is exclusive while any pill pane
-// is open so Super+C/V/R land in the pill with no manual click; Esc
-// anywhere in the bar collapses via the island trapdoor.
+// Dynamic Island host window: one fixed, transparent, top-centered
+// window per monitor. The window holds its largest-state envelope
+// (hub 420x236 + 64px side padding + 8px top margin) and only the pill
+// resizes; the click-through mask tracks the pill exactly. Clicking
+// anywhere outside while expanded clears the focus grab and collapses.
 Variants {
-  model: Quickshell.screens
+  // One island per monitor; a single-monitor setup falls back to the
+  // primary screen when the Config flag is off.
+  model: Isle.IslandState.showOnAllMonitors || Quickshell.screens.length === 0
+    ? Quickshell.screens : [Quickshell.screens[0]]
 
   delegate: Component {
     PanelWindow {
@@ -24,45 +24,33 @@ Variants {
       screen: modelData
       anchors {
         top: true
-        left: true
-        right: true
       }
       margins {
-        top: 0
-        left: 0
-        right: 0
-        bottom: 0
+        top: 8
       }
-      implicitHeight: island.height
+      implicitWidth: island.implicitWidth
+      implicitHeight: island.implicitHeight
       color: "transparent"
       exclusionMode: ExclusionMode.Ignore
       WlrLayershell.layer: WlrLayer.Top
       WlrLayershell.namespace: "quickshell-bar" // kept: hyprland.lua layerrules match this
-      WlrLayershell.keyboardFocus: (ShellState.islandMode !== "" && (Hyprland.focusedMonitor === null || Hyprland.monitorFor(modelData) === Hyprland.focusedMonitor)) ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
+      WlrLayershell.keyboardFocus: Isle.IslandState.expanded ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
 
       mask: Region {
-        // Tight on the pill unless a pane is open (full window then so
-        // outside clicks reach the dismiss layer). Hover-peek never
-        // widens the mask. Swaps on state change only, never per-frame.
-        item: island.mode !== "" ? dismissArea : island.pillHit
+        item: island.pillItem
       }
 
-      // Click-outside-to-minimize: full-window transparent layer BEHIND
-      // the pill, live only while a pane is open. The island above wins
-      // all pill hits, so buttons keep working; anything else in the
-      // window dismisses.
-      MouseArea {
-        id: dismissArea
-        anchors.fill: parent
-        enabled: island.mode !== ""
-        onClicked: island.dismiss()
+      // Click-outside-to-collapse: while expanded the island owns the
+      // grab; losing it (click elsewhere, workspace switch) collapses.
+      HyprlandFocusGrab {
+        active: Isle.IslandState.expanded
+        windows: [bar]
+        onCleared: Isle.IslandState.collapse()
       }
 
-      DynamicIsland {
+      Isle.Island {
         id: island
         barScreen: bar.screen
-        anchors.top: parent.top
-        anchors.horizontalCenter: parent.horizontalCenter
       }
     }
   }
