@@ -176,17 +176,46 @@ Item {
     onTriggered: island.hShown = island.targetH
   }
   onTargetHChanged: {
-    if (island.rm)
+    if (island.rm) {
       island.hShown = island.targetH;
-    else
+      island.settleWin();
+    } else {
       hLag.restart();
+      island.growWin();
+    }
   }
-  Component.onCompleted: island.hShown = island.targetH
+  Component.onCompleted: {
+    island.hShown = island.targetH;
+    island.winReady = true;
+    island.growWin();
+  }
 
-  // Fixed window envelope: hub + 64px side padding + 8px top margin.
-  // Legacy panes may push past it; island states never resize it.
-  implicitWidth: Math.max(548, island.targetW + 128)
-  implicitHeight: Math.max(308, island.targetH + 72)
+  // Window envelope: grows immediately on target change, shrinks only
+  // after the pill springs settle — the window never guillotines the
+  // pill mid-morph (e.g. legacy → idle).
+  property bool winReady: false
+  property int winW: 548
+  property int winH: 308
+  function wantW() { return Math.max(548, island.targetW + 128); }
+  function wantH() { return Math.max(308, island.targetH + 72); }
+  function growWin() {
+    if (!island.winReady)
+      return;
+    const w = island.wantW(), h = island.wantH();
+    if (w > island.winW)
+      island.winW = w;
+    if (h > island.winH)
+      island.winH = h;
+  }
+  function settleWin() {
+    if (!island.winReady || wSpring.running || hSpring.running)
+      return;
+    island.winW = island.wantW();
+    island.winH = island.wantH();
+  }
+  onTargetWChanged: island.rm ? island.settleWin() : island.growWin()
+  implicitWidth: island.winW
+  implicitHeight: island.winH
 
   // ---- the pill --------------------------------------------------
   Item {
@@ -205,6 +234,7 @@ Item {
         spring: IslandTheme.springStiffness
         damping: IslandTheme.springDamping
         epsilon: IslandTheme.springEps
+        onRunningChanged: island.settleWin()
       }
     }
     Behavior on height {
@@ -214,6 +244,7 @@ Item {
         spring: IslandTheme.springStiffness
         damping: IslandTheme.springDamping
         epsilon: IslandTheme.springEps
+        onRunningChanged: island.settleWin()
       }
     }
 
@@ -256,6 +287,9 @@ Item {
 
     WheelHandler {
       // Scroll: volume ±5%; Shift+scroll: brightness ±5%.
+      // Off while a legacy pane is open so pane scrolling can't
+      // change the volume.
+      enabled: !IslandState.legacyActive
       onWheel: (event) => {
         const d = event.angleDelta.y > 0 ? 1 : -1;
         if (event.modifiers & Qt.ShiftModifier)
@@ -266,10 +300,11 @@ Item {
     }
 
     // Background gaps: left toggles the activity's expanded view
-    // (idle→hub), right flips DND, middle plays/mutes.
+    // (idle→hub). Right/middle are only accepted while collapsed —
+    // under hub/media/legacy faces they would hijack DND and mute.
     MouseArea {
       anchors.fill: parent
-      acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
+      acceptedButtons: IslandState.expanded ? Qt.LeftButton : Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
       hoverEnabled: true
       cursorShape: Qt.PointingHandCursor
       onClicked: (mouse) => {
@@ -1250,17 +1285,19 @@ Item {
   }
 
   // Keyboard parity with the old pill: land on the first toggle when
-  // the controls main view opens.
+  // the controls main view opens, on the calendar grid in its pane.
   Timer {
     id: legacyFocus
     interval: 120
     onTriggered: {
       if (island.legacyMode === "controls")
         controlsBody.focusFirst();
+      else if (island.legacyMode === "calendar")
+        islandCal.forceActiveFocus();
     }
   }
   onLegacyModeChanged: {
-    if (island.legacyMode === "controls")
+    if (island.legacyMode === "controls" || island.legacyMode === "calendar")
       legacyFocus.restart();
   }
 }

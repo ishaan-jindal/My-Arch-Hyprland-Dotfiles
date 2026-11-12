@@ -18,8 +18,18 @@ Singleton {
     const list = root.players;
     if (root.activePlayer && list.indexOf(root.activePlayer) !== -1)
       return root.activePlayer;
+
+    // A stopped player with no track is a dead end for the island: prefer
+    // something that is actually playing/paused, then anything alive.
+    const playable = (p) => p.playbackState === MprisPlaybackState.Playing
+      || p.playbackState === MprisPlaybackState.Paused;
+
     for (let i = 0; i < list.length; i++) {
-      if (list[i].playbackState === MprisPlaybackState.Playing)
+      if (playable(list[i]) && list[i].trackTitle)
+        return list[i];
+    }
+    for (let i = 0; i < list.length; i++) {
+      if (list[i].playbackState !== MprisPlaybackState.Stopped)
         return list[i];
     }
     return list.length > 0 ? list[0] : null;
@@ -33,6 +43,11 @@ Singleton {
   readonly property string artist: player ? (player.trackArtist || "") : ""
   readonly property string artUrl: player ? (player.trackArtUrl || "") : ""
 
+  // The binding below makes `positionChanged` (the auto-generated notify signal
+  // for this property) re-fire on the active player's positionChanged, so an
+  // external/nonlinear seek reaches UI through the facade without polling.
+  // A second `signal positionChanged()` is illegal in QML: it would collide
+  // with this property's change signal ("Duplicate signal name" at load).
   readonly property real position: player ? player.position : 0
   readonly property real length: player ? player.length : 0
   readonly property bool positionSupported: player ? player.positionSupported : false

@@ -34,7 +34,10 @@ Variants {
       exclusionMode: ExclusionMode.Ignore
       WlrLayershell.layer: WlrLayer.Top
       WlrLayershell.namespace: "quickshell-bar" // kept: hyprland.lua layerrules match this
-      WlrLayershell.keyboardFocus: Isle.IslandState.expanded ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
+      // Text panes need Exclusive; hub/media take focus on demand so a
+      // preempting notification never sits under a stale Exclusive grab.
+      WlrLayershell.keyboardFocus: Isle.IslandState.legacyActive ? WlrKeyboardFocus.Exclusive
+        : Isle.IslandState.expanded ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
 
       mask: Region {
         item: island.pillItem

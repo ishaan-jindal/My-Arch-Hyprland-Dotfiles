@@ -130,12 +130,16 @@ Singleton {
   function seekTo(x) {
     const v = Math.max(0, Math.min(state.length, x));
     // Hard API fact: no setPosition() — the facade assigns position.
+    // The write is async: track the target locally, don't re-read.
     if (state.demoMedia) {
       state.demoPos = v;
+      state.markPos();
     } else {
       Svc.Media.seekTo(v);
+      state.posBase = v;
+      state.posStamp = Date.now();
+      state.shownPos = v;
     }
-    state.markPos();
   }
 
   function fmtDur(secs) {
@@ -145,6 +149,15 @@ Singleton {
 
   onIsPlayingChanged: state.markPos()
   onPlayerChanged: state.markPos()
+
+  // Server-side position jumps (track change, remote seek) rebase the
+  // local ticker. Null target is fine — Connections stays inactive.
+  Connections {
+    target: Svc.Media.player
+    function onPositionChanged() {
+      state.markPos();
+    }
+  }
 
   // ---------------------------------------------------------------
   // Audio / Brightness / Battery (live services facades over Sys)
@@ -290,6 +303,8 @@ Singleton {
   function notifLifeMs(n) {
     if (!n)
       return 0;
+    if (n.expireTimeout === 0)
+      return 0; // 0 means never — persistent notifications stay
     if (n.expireTimeout > 0)
       return n.expireTimeout;
     if (state.notifUrgent)
@@ -313,6 +328,8 @@ Singleton {
       return;
     state.notifRemaining = life;
     state.notifStamp = Date.now();
+    if (state.notifHover)
+      return; // hovered: hold the full life, the resume path restarts
     notifTimer.interval = life;
     notifTimer.start();
   }
@@ -321,10 +338,12 @@ Singleton {
     id: notifTimer
     onTriggered: {
       const n = state.notifToShow;
-      if (n && !n.demo)
-        Notify.dismiss(n);
-      else if (n && n.demo)
+      if (n && !n.demo) {
+        Notify.untrack(n);
+        n.expire();
+      } else if (n && n.demo) {
         state.demoKind = "";
+      }
     }
   }
 
@@ -351,14 +370,17 @@ Singleton {
       state.demoKind = "";
       return;
     }
-    if (n.actions && n.actions.length > 0) {
-      try {
-        n.actions[0].invoke();
-      } catch (e) {}
-      Notify.untrack(n);
-    } else {
-      Notify.dismiss(n);
+    const acts = n.actions || [];
+    for (let i = 0; i < acts.length; i++) {
+      if (acts[i] && acts[i].identifier === "default") {
+        try {
+          acts[i].invoke();
+        } catch (e) {}
+        Notify.untrack(n);
+        return;
+      }
     }
+    Notify.dismiss(n);
   }
 
   function notifClose() {
@@ -398,7 +420,10 @@ Singleton {
     return "idle";
   }
 
-  readonly property bool expanded: state.userFace !== "" || state.legacyActive
+  // Only a truly expanded face holds the grab/focus: a notification
+  // preempting the hub must not leave grab + Exclusive on nothing.
+  readonly property bool expanded: state.legacyActive
+    || state.display === "hub" || state.display === "media"
 
   function collapse() {
     state.userFace = "";

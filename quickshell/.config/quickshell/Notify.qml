@@ -2,6 +2,7 @@ pragma Singleton
 
 import QtQuick
 import QtQml
+import QtQml.Models
 import Quickshell
 import Quickshell.Services.Notifications
 
@@ -40,6 +41,20 @@ Singleton {
         "dismissAt": lifeMs > 0 ? Date.now() + lifeMs : 0,
         "lifeMs": lifeMs
       });
+    }
+  }
+
+  // Server-side close/replace: a notification retired by the server must leave
+  // the island queue too. untrack() is idempotent, so expire/dismiss races are
+  // safe (same pattern the popup delegates used to run).
+  Instantiator {
+    model: root.popups
+
+    delegate: Connections {
+      target: modelData
+      function onClosed(reason) {
+        root.untrack(modelData);
+      }
     }
   }
 
