@@ -93,6 +93,7 @@ hl.config({
   },
 
   misc = {
+    font_family             = "Inter",
     force_default_wallpaper = 0,
     disable_hyprland_logo   = true,
   },
@@ -306,3 +307,13 @@ hl.layer_rule({
   -- 0.18 so the island glass (alpha 0.85) still frosts.
   ignore_alpha = 0.18,
 })
+
+
+----------------------------------------
+-- QUICKSHELL ISLAND --------------------
+----------------------------------------
+
+-- >>> quickshell island
+hl.layer_rule({ name = "no-anim-qs-bar", match = { namespace = "^quickshell-bar$" }, no_anim = true })
+hl.bind("SUPER + I", hl.dsp.exec_cmd("qs ipc call island toggle"))
+-- <<< quickshell island
