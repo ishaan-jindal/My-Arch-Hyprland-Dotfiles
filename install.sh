@@ -71,6 +71,7 @@ stow_packages=(
     "nvim"
     "quickshell"
     "gtk"
+    "fontconfig"
     "xdg-portal"
     "fish"
     "ghostty"
