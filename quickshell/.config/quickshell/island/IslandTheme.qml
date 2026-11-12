@@ -2,30 +2,35 @@ pragma Singleton
 
 import QtQuick
 import Quickshell
+import ".."
 
 // Dynamic Island visual tokens. Single source for every island pixel:
 // palette, type ramp and all state sizes / motion constants.
 // Font rule: "Inter" is the ONLY font string in the island.
+// Colors follow the wallpaper theme via the Theme bridge (matugen);
+/// only traffic-light semantics stay fixed.
 Singleton {
   id: root
 
   readonly property string name: "IslandTheme"
   readonly property string fontFamily: "Inter"
 
-  // Palette
-  readonly property color surface: "#1C1C1E"
-  readonly property color surfaceHigh: "#2C2C2E"
-  readonly property color text: "#FFFFFF"
-  readonly property color textSecondary: "#99EBEBF5"
-  readonly property color accent: "#0A84FF"
+  // Palette — wallpaper-driven via Theme (updates live on switch,
+  // with the shell's cross-fade); green/orange/yellow stay fixed
+  // because they carry status meaning, not theme identity.
+  readonly property color surface: Theme.bgSolid
+  readonly property color surfaceHigh: Theme.hover
+  readonly property color text: Theme.fg
+  readonly property color textSecondary: Theme.muted
+  readonly property color accent: Theme.accent
   readonly property color green: "#30D158"
-  readonly property color red: "#FF453A"
+  readonly property color red: Theme.critical
   readonly property color orange: "#FF9F0A"
   readonly property color yellow: "#FFD60A"
 
-  // Pill chrome
-  readonly property color pill: "#000000"
-  readonly property color pillBorder: "#14FFFFFF"
+  // Pill chrome — tinted with the theme, not pure black.
+  readonly property color pill: Theme.bgSolid
+  readonly property color pillBorder: Theme.border
 
   // Type ramp (weights applied at call sites: DemiBold / Normal)
   readonly property int compactSize: 13    // semibold compact
@@ -50,7 +55,7 @@ Singleton {
   readonly property int mediaH: 190
   readonly property real mediaR: 36
   readonly property int hubW: 420
-  readonly property int hubH: 236
+  readonly property int hubH: 200
   readonly property real hubR: 36
 
   // Legacy pane hosting (existing bodies keep their settled sizes)

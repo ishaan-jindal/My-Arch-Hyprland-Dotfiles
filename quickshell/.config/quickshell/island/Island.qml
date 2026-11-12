@@ -601,8 +601,16 @@ Item {
 
           Text {
             width: parent.width
-            text: (island.notif && island.notif.appName ? island.notif.appName.toUpperCase() + "  ·  " : "")
-              + (island.notif && island.notif.summary ? island.notif.summary : "")
+            // Generic senders (notify-send without -a, empty names) add no
+            // information — show the summary alone instead of "NOTIFY-SEND · …".
+            text: {
+              const n = island.notif;
+              const app = n && n.appName ? String(n.appName) : "";
+              const sum = n && n.summary ? String(n.summary) : "";
+              if (app === "" || app.toLowerCase() === "notify-send")
+                return sum;
+              return sum !== "" ? app.toUpperCase() + "  ·  " + sum : app.toUpperCase();
+            }
             color: IslandTheme.text
             font.family: IslandTheme.fontFamily
             font.pixelSize: IslandTheme.titleSize
@@ -850,7 +858,7 @@ Item {
       }
     }
 
-    // ---- hub: header + toggles + sliders + mini media --------
+    // ---- hub: header + toggles + sliders ------------------------
     Face {
       anchors.fill: parent
       shown: island.face === "hub"
@@ -904,7 +912,7 @@ Item {
                 ctx.beginPath();
                 ctx.arc(cx, cy, r, 0, Math.PI * 2);
                 ctx.stroke();
-                ctx.strokeStyle = IslandState.charging ? "#30D158" : "#0A84FF";
+                ctx.strokeStyle = IslandState.charging ? IslandTheme.green : IslandTheme.accent;
                 ctx.beginPath();
                 ctx.arc(cx, cy, r, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * IslandState.percent / 100);
                 ctx.stroke();
@@ -1046,111 +1054,6 @@ Item {
           }
         }
 
-        // Mini media row: live track while playing, dim placeholder
-        // otherwise so the 236px hub height is always filled.
-        Item {
-          width: parent.width
-          height: 30
-
-          Row {
-            anchors.fill: parent
-            spacing: 8
-            visible: IslandState.isPlaying && IslandState.hasPlayer
-
-            Rectangle {
-              width: 28
-              height: 28
-              radius: 7
-              color: IslandTheme.surfaceHigh
-              clip: true
-              anchors.verticalCenter: parent.verticalCenter
-
-              Image {
-                id: miniArt
-                anchors.fill: parent
-                source: IslandState.artUrl
-                fillMode: Image.PreserveAspectCrop
-                visible: IslandState.artUrl !== "" && status === Image.Ready
-              }
-
-              Text {
-                anchors.centerIn: parent
-                text: (IslandState.title || "?").charAt(0).toUpperCase()
-                color: IslandTheme.textSecondary
-                font.family: IslandTheme.fontFamily
-                font.pixelSize: 13
-                font.weight: Font.DemiBold
-                visible: !miniArt.visible
-              }
-            }
-
-            Column {
-              width: parent.width - 28 - 24 - 16
-              anchors.verticalCenter: parent.verticalCenter
-              spacing: 0
-
-              Text {
-                width: parent.width
-                text: IslandState.title
-                color: IslandTheme.text
-                font.family: IslandTheme.fontFamily
-                font.pixelSize: 12
-                font.weight: Font.DemiBold
-                elide: Text.ElideRight
-                maximumLineCount: 1
-              }
-
-              Text {
-                width: parent.width
-                text: IslandState.artist
-                color: IslandTheme.textSecondary
-                font.family: IslandTheme.fontFamily
-                font.pixelSize: 11
-                elide: Text.ElideRight
-                maximumLineCount: 1
-              }
-            }
-
-            Text {
-              anchors.verticalCenter: parent.verticalCenter
-              text: Icons.pause
-              color: IslandTheme.text
-              font.family: Theme.fontFamily
-              font.pixelSize: 16
-
-              MouseArea {
-                anchors.fill: parent
-                anchors.margins: -6
-                cursorShape: Qt.PointingHandCursor
-                onClicked: IslandState.togglePlaying()
-              }
-            }
-          }
-
-          Row {
-            anchors.fill: parent
-            spacing: 8
-            visible: !(IslandState.isPlaying && IslandState.hasPlayer)
-
-            Rectangle {
-              width: 28
-              height: 28
-              radius: 7
-              color: IslandTheme.surfaceHigh
-              anchors.verticalCenter: parent.verticalCenter
-              opacity: 0.6
-            }
-
-            Text {
-              anchors.verticalCenter: parent.verticalCenter
-              text: "Nothing playing"
-              color: IslandTheme.textSecondary
-              font.family: IslandTheme.fontFamily
-              font.pixelSize: 12
-              opacity: 0.7
-            }
-          }
-        }
       }
     }
 

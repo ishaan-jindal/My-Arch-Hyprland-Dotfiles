@@ -43,8 +43,8 @@ Singleton {
     id: wallClock
     precision: SystemClock.Minutes
   }
-  readonly property string timeText: Qt.formatDateTime(wallClock.date, "HH:mm")
-  readonly property string dateText: Qt.formatDateTime(wallClock.date, "ddd d MMM")
+  readonly property string timeText: wallClock.date ? Qt.formatDateTime(wallClock.date, "HH:mm") : ""
+  readonly property string dateText: wallClock.date ? Qt.formatDateTime(wallClock.date, "ddd d MMM") : ""
 
   // ---------------------------------------------------------------
   // Media (live services/Media facade over Mpris)
@@ -401,7 +401,9 @@ Singleton {
   readonly property string legacyMode: state.legacyActive ? ShellState.islandMode : ""
   readonly property bool osdMode: ShellState.islandMode === "osd"
 
-  // notification > toast > user-expanded > activity > idle.
+  // notification > toast > user-expanded > idle. Media never
+  // auto-shows (no now-playing indicator): the clock stays put while
+  // music plays; media lives in the user-opened hub/media views.
   // A legacy pane always wins (user intent); a toast never preempts
   // a user-expanded view; a notification does.
   readonly property string display: {
@@ -415,8 +417,6 @@ Singleton {
       return state.userFace;
     if (ShellState.osdVisible || state.wsToastActive)
       return "toast";
-    if (state.hasPlayer)
-      return "activity";
     return "idle";
   }
 
@@ -433,7 +433,7 @@ Singleton {
       ShellState.closeAllPopups();
   }
 
-  // Left click toggles the current activity's expanded view (idle→hub).
+  // Left click always opens the hub — never the media view.
   function toggleView() {
     if (state.userFace !== "" || state.legacyActive) {
       state.collapse();
@@ -444,7 +444,7 @@ Singleton {
     state.clearToast();
     if (ShellState.islandMode !== "")
       ShellState.closeAllPopups();
-    state.userFace = state.hasPlayer ? "media" : "hub";
+    state.userFace = "hub";
     state.markPos();
   }
 
