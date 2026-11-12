@@ -14,7 +14,7 @@ Item {
         { keys: "SUPER + RETURN", desc: "Terminal (ghostty)" },
         { keys: "SUPER + R", desc: "App launcher" },
         { keys: "SUPER + B", desc: "Browser (zen-browser)" },
-        { keys: "SUPER + E", desc: "File manager (nemo)" },
+        { keys: "SUPER + E", desc: "File manager (nautilus)" },
         { keys: "SUPER + M", desc: "Android emulator" }
       ]
     },

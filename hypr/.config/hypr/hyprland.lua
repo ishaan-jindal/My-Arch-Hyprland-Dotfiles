@@ -240,12 +240,12 @@ hl.bind(mainMod .. " + N", hl.dsp.exec_cmd("~/.config/hypr/scripts/night_light_t
 hl.bind(mainMod .. " + Z", hl.dsp.exec_cmd("~/.config/hypr/scripts/zoom_toggle.sh"))
 
 -- File manager
-hl.bind(mainMod .. " + E", hl.dsp.exec_cmd("nemo"))
+hl.bind(mainMod .. " + E", hl.dsp.exec_cmd("nautilus"))
 
 -- Android emulator
 hl.bind(mainMod .. " + M",
   hl.dsp.exec_cmd(
-  "QT_QPA_PLATFORM=xcb ~/Android/Sdk/emulator/emulator -avd flutter_emulator -writable-system -no-snapshot"))
+    "QT_QPA_PLATFORM=xcb ~/Android/Sdk/emulator/emulator -avd flutter_emulator -writable-system -no-snapshot"))
 
 -- Volume (repeating + locked)
 hl.bind("XF86AudioRaiseVolume", hl.dsp.exec_cmd("wpctl set-volume -l 1 @DEFAULT_AUDIO_SINK@ 1%+"),
@@ -264,9 +264,6 @@ hl.bind("XF86AudioNext", hl.dsp.exec_cmd("playerctl next"), { locked = true })
 hl.bind("XF86AudioPause", hl.dsp.exec_cmd("playerctl play-pause"), { locked = true })
 hl.bind("XF86AudioPlay", hl.dsp.exec_cmd("playerctl play-pause"), { locked = true })
 hl.bind("XF86AudioPrev", hl.dsp.exec_cmd("playerctl previous"), { locked = true })
-
--- Misc (reserved)
-
 
 ----------------------------
 -- WINDOW RULES ------------
