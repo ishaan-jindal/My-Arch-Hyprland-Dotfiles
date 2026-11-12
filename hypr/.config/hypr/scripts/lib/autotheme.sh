@@ -27,6 +27,8 @@ GTK3_TEMPLATE="$HOME/.config/hypr/scripts/templates/gtk3.css"
 GTK3_CSS="$HOME/.config/gtk-3.0/gtk.css"
 GTK4_TEMPLATE="$HOME/.config/hypr/scripts/templates/gtk4.css"
 GTK4_CSS="$HOME/.config/gtk-4.0/gtk.css"
+FASTFETCH_TEMPLATE="$HOME/.config/hypr/scripts/templates/fastfetch.jsonc"
+FASTFETCH_CONFIG="$HOME/.config/fastfetch/config.jsonc"
 VIBRANT_PY="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/vibrant.py"
 
 # Fixed dark desktop furniture (the generated palette only themes the shell).
@@ -200,6 +202,25 @@ render_template_fallback() {
         -e 's|{{ colors.tertiary.dark.red }}|139|g'
         -e 's|{{ colors.tertiary.dark.green }}|143|g'
         -e 's|{{ colors.tertiary.dark.blue }}|152|g'
+        -e 's|{{colors.primary.dark.hex}}|#ffffff|g'
+        -e 's|{{colors.on_surface.dark.hex}}|#e6e6e6|g'
+        -e 's|{{colors.on_surface_variant.dark.hex}}|#8b8f98|g'
+        -e 's|{{colors.outline_variant.dark.hex}}|#3a3f4b|g'
+        -e 's|{{colors.secondary.dark.hex}}|#8b8f98|g'
+        -e 's|{{colors.tertiary.dark.hex}}|#8b8f98|g'
+        -e 's|{{colors.error.dark.hex}}|#ff5f5f|g'
+        -e 's|{{colors.primary.dark.red}}|255|g'
+        -e 's|{{colors.primary.dark.green}}|255|g'
+        -e 's|{{colors.primary.dark.blue}}|255|g'
+        -e 's|{{colors.on_surface.dark.red}}|230|g'
+        -e 's|{{colors.on_surface.dark.green}}|230|g'
+        -e 's|{{colors.on_surface.dark.blue}}|230|g'
+        -e 's|{{colors.on_surface_variant.dark.red}}|139|g'
+        -e 's|{{colors.on_surface_variant.dark.green}}|143|g'
+        -e 's|{{colors.on_surface_variant.dark.blue}}|152|g'
+        -e 's|{{colors.outline_variant.dark.red}}|58|g'
+        -e 's|{{colors.outline_variant.dark.green}}|63|g'
+        -e 's|{{colors.outline_variant.dark.blue}}|75|g'
         -e 's|{{ vibrant.hex }}|#ffffff|g'
         -e 's|{{ vibrant_soft.hex }}|#8b8f98|g'
         -e 's|{{ vibrant_on.hex }}|#0a0a0c|g'
@@ -232,6 +253,7 @@ write_all_fallbacks() {
     render_template_fallback "$SDDM_TEMPLATE" "$SDDM_STAGED" || true
     render_template_fallback "$GTK3_TEMPLATE" "$GTK3_CSS" || true
     render_template_fallback "$GTK4_TEMPLATE" "$GTK4_CSS" || true
+    render_template_fallback "$FASTFETCH_TEMPLATE" "$FASTFETCH_CONFIG" || true
     reload_ghostty
 }
 
@@ -383,17 +405,21 @@ output_path = "$GTK3_CSS"
 [templates.gtk4]
 input_path = "$GTK4_TEMPLATE"
 output_path = "$GTK4_CSS"
+[templates.fastfetch]
+input_path = "$FASTFETCH_TEMPLATE"
+output_path = "$FASTFETCH_CONFIG"
 EOF
         mkdir -p "$(dirname "$AUTOTHEME_JSON")" "$(dirname "$GHOSTTY_THEME")" \
             "$(dirname "$HYPLOCK_CONF")" "$(dirname "$SDDM_STAGED")" \
-            "$(dirname "$GTK3_CSS")" "$(dirname "$GTK4_CSS")"
+            "$(dirname "$GTK3_CSS")" "$(dirname "$GTK4_CSS")" \
+            "$(dirname "$FASTFETCH_CONFIG")"
         if matugen image "$src" --mode dark --config "$tmpcfg" \
                 --import-json "$vib" >/dev/null 2>&1 \
             && autotheme_valid && [ -f "$GHOSTTY_THEME" ] \
             && [ -f "$HYPLOCK_CONF" ] && [ -f "$SDDM_STAGED" ] \
             && [ -f "$GTK3_CSS" ] && [ -f "$GTK4_CSS" ] \
             && ! grep -q '{{' "$HYPLOCK_CONF" "$SDDM_STAGED" "$GTK3_CSS" "$GTK4_CSS" "$GHOSTTY_THEME" \
-                "$AUTOTHEME_JSON" 2>/dev/null; then
+                "$AUTOTHEME_JSON" "$FASTFETCH_CONFIG" 2>/dev/null; then
             # matugen records its actual input in {{image}} — for videos
             # that is the temp frame, so pin the real wallpaper path.
             local fixed
