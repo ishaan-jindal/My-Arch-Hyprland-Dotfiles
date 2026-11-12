@@ -6,6 +6,9 @@ hypr/.config/hypr/themes/wallpapers/thumbs/
 ghostty/.config/ghostty/themes/autotheme
 # Generated lock-screen config (rendered from hyprlock.conf.template).
 hypr/.config/hypr/hyprlock.conf
+# Generated GTK accent tints (rendered from templates on wallpaper switch).
+gtk/.config/gtk-3.0/gtk.css
+gtk/.config/gtk-4.0/gtk.css
 # Tooling caches (ruff, python bytecode from scripts/lib and limine/scripts).
 .ruff_cache/
 __pycache__/
