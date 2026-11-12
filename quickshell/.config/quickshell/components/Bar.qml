@@ -45,10 +45,16 @@ Variants {
 
       // Click-outside-to-collapse: while expanded the island owns the
       // grab; losing it (click elsewhere, workspace switch) collapses.
+      // The grab can report a spurious `cleared` in the same frame it
+      // activates (focus hasn't settled) — ignore those, or no pane
+      // would ever stay open.
       HyprlandFocusGrab {
+        id: grab
         active: Isle.IslandState.expanded
         windows: [bar]
-        onCleared: Isle.IslandState.collapse()
+        property double armedAt: 0
+        onActiveChanged: if (active) armedAt = Date.now()
+        onCleared: if (Date.now() - grab.armedAt > 250) Isle.IslandState.collapse()
       }
 
       Isle.Island {
