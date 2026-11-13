@@ -29,7 +29,7 @@ label {
 
     color = rgba(255, 255, 255, 0.92)
     font_size = 96
-    font_family = Inter Bold
+    font_family = JetBrainsMono NF Bold
 
     position = 0, 20
     halign = center
@@ -43,7 +43,7 @@ label {
 
     color = rgba(220, 220, 220, 0.6)
     font_size = 22
-    font_family = Inter
+    font_family = JetBrainsMono NF
 
     position = 0, -80
     halign = center
@@ -68,7 +68,7 @@ input-field {
     outer_color = rgba({{ vibrant.red }}, {{ vibrant.green }}, {{ vibrant.blue }}, 0.55)
 
     font_color = rgba(255, 255, 255, 0.9)
-    font_family = Inter
+    font_family = JetBrainsMono NF
 
     # Feedback states (check follows the second vivid hue)
     check_color = rgba({{ vibrant_soft.red }}, {{ vibrant_soft.green }}, {{ vibrant_soft.blue }}, 0.65)

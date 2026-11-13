@@ -93,7 +93,7 @@ hl.config({
   },
 
   misc = {
-    font_family             = "Inter",
+    font_family             = "JetBrainsMono Nerd Font Mono",
     force_default_wallpaper = 0,
     disable_hyprland_logo   = true,
   },
