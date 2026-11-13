@@ -36,8 +36,6 @@ Item {
       enabled: !IslandState.reduceMotion
       NumberAnimation {
         duration: faceRoot.shown ? IslandTheme.fadeInMs : IslandTheme.fadeOutMs
-        // Sequential fade: out finishes before the incoming face starts.
-        delay: faceRoot.shown ? IslandTheme.fadeDelayMs : 0
         easing.type: Easing.OutCubic
       }
     }
