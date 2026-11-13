@@ -71,7 +71,7 @@ hl.config({
 
     shadow           = {
       enabled      = true,
-      range        = 4,
+      range        = 14,
       render_power = 3,
       color        = "rgba(1a1a1aee)",
     },
@@ -133,9 +133,11 @@ hl.animation({ leaf = "layersIn", enabled = true, speed = 4, bezier = "easeOutQu
 hl.animation({ leaf = "layersOut", enabled = true, speed = 1.5, bezier = "linear", style = "fade" })
 hl.animation({ leaf = "fadeLayersIn", enabled = true, speed = 1.79, bezier = "almostLinear" })
 hl.animation({ leaf = "fadeLayersOut", enabled = true, speed = 1.39, bezier = "almostLinear" })
-hl.animation({ leaf = "workspaces", enabled = true, speed = 0.4, bezier = "quick", style = "fade" })
-hl.animation({ leaf = "workspacesIn", enabled = true, speed = 0.4, bezier = "quick", style = "slidefade" })
-hl.animation({ leaf = "workspacesOut", enabled = true, speed = 0.4, bezier = "quick", style = "slidefade" })
+hl.animation({ leaf = "workspaces", enabled = true, speed = 2, bezier = "quick", style = "fade" })
+hl.animation({ leaf = "workspacesIn", enabled = true, speed = 2, bezier = "quick", style = "slidefade" })
+hl.animation({ leaf = "workspacesOut", enabled = true, speed = 2, bezier = "quick", style = "slidefade" })
+hl.animation({ leaf = "specialWorkspace", enabled = true, speed = 2.5, bezier = "easeOutQuint", style = "slidefade" })
+hl.animation({ leaf = "zoomFactor", enabled = true, speed = 2.5, bezier = "easeOutQuint" })
 
 
 ------------------
@@ -299,6 +301,7 @@ hl.layer_rule({
   match = { namespace = "^quickshell-popup$" },
   blur = true,
   ignore_alpha = 0.5,
+  no_anim = true,
 })
 
 hl.layer_rule({
