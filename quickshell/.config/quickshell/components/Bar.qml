@@ -7,7 +7,7 @@ import ".."
 
 // Dynamic Island host window: one fixed, transparent, top-centered
 // window per monitor. The window holds its largest-state envelope
-// (hub 420x200 + 64px side padding + 8px top margin) and only the pill
+// (hub 420x200 + 64px side padding) and only the pill
 // resizes; the click-through mask tracks the pill exactly. Clicking
 // anywhere outside while expanded clears the focus grab and collapses.
 Variants {
@@ -26,7 +26,7 @@ Variants {
         top: true
       }
       margins {
-        top: 8
+        top: 0
       }
       implicitWidth: island.implicitWidth
       implicitHeight: island.implicitHeight

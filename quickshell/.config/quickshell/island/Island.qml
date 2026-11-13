@@ -343,10 +343,19 @@ Item {
   Item {
     id: pill
     anchors.top: parent.top
-    anchors.topMargin: 8
+    // Sunk above the screen edge by exactly the corner radius: the
+    // rounded top corners are cut by the ceiling, so the pill reads
+    // as hanging from it. Tracks baseR so every face stays flush.
+    anchors.topMargin: -island.baseR
+    Behavior on anchors.topMargin {
+      enabled: !island.rm
+      NumberAnimation { duration: IslandTheme.radiusMs; easing.type: Easing.OutCubic }
+    }
     anchors.horizontalCenter: parent.horizontalCenter
     width: island.targetW
-    height: island.hShown
+    // Taller by baseR to compensate the sunk top: the visible part
+    // below the ceiling keeps the full hShown height.
+    height: island.hShown + island.baseR
     // Content clipping lives on the faces box below; clipping the pill
     // itself would shear the background shadow during springs.
 
@@ -451,6 +460,13 @@ Item {
     Item {
       id: facesContainer
       anchors.fill: parent
+      // Inset by the sunk radius so faces stay centered in the
+      // visible (below-ceiling) part of the pill.
+      anchors.topMargin: island.baseR
+      Behavior on anchors.topMargin {
+        enabled: !island.rm
+        NumberAnimation { duration: IslandTheme.radiusMs; easing.type: Easing.OutCubic }
+      }
       clip: wSpring.running || hSpring.running
 
       // ---- idle: compact clock --------------------------------
