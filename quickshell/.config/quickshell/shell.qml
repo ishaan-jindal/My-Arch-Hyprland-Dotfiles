@@ -11,8 +11,7 @@ import "island" as Isle
 // Quickshell entry point. See docs/QUICKSHELL.md.
 ShellRoot {
   Bar {}
-  // NotificationPopups retired: notifications now render in the island
-  // (one-at-a-time + queue, hover-pause, click=default action). File kept.
+  NotificationPopups {}
 
   IpcHandler {
     target: "shell"
@@ -37,9 +36,9 @@ ShellRoot {
       ShellState.toggleSession();
     }
 
-    // qs ipc call shell toggleCenter
+    // qs ipc call shell toggleCenter — merged island hub (SUPER+C)
     function toggleCenter(): void {
-      ShellState.toggleCenter();
+      Isle.IslandState.toggleHub();
     }
 
     // qs ipc call shell toggleCalendar
@@ -47,14 +46,14 @@ ShellRoot {
       ShellState.toggleCalendar();
     }
 
-    // qs ipc call shell openCenterView wifi | bluetooth
+    // qs ipc call shell openCenterView wifi — hub wifi list (or hub)
     function openCenterView(view: string): void {
-      ShellState.openCenterView(view);
+      Isle.IslandState.openHub(view);
     }
 
-    // qs ipc call shell openCenterSection audio | system | display | power | calendar
+    // qs ipc call shell openCenterSection audio — merged hub (sections merged)
     function openCenterSection(section: string): void {
-      ShellState.openCenterSection(section);
+      Isle.IslandState.openHub("");
     }
 
     // qs ipc call shell closeAll

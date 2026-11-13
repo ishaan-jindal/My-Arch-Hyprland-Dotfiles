@@ -13,7 +13,7 @@ Singleton {
   id: root
 
   readonly property string name: "IslandTheme"
-  readonly property string fontFamily: "Inter"
+  readonly property string fontFamily: "JetBrainsMono Nerd Font Mono"
 
   // Palette — wallpaper-driven via Theme (updates live on switch,
   // with the shell's cross-fade); green/orange/yellow stay fixed
@@ -55,7 +55,8 @@ Singleton {
   readonly property int mediaH: 190
   readonly property real mediaR: 36
   readonly property int hubW: 420
-  readonly property int hubH: 200
+  readonly property int hubH: 404
+  readonly property int hubListH: 380
   readonly property real hubR: 36
 
   // Legacy pane hosting (existing bodies keep their settled sizes)

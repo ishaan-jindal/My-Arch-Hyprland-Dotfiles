@@ -21,7 +21,7 @@ Item {
     {
       title: "Shell (Quickshell)",
       binds: [
-        { keys: "SUPER + C", desc: "Control centre (audio/media/notifs)" },
+        { keys: "SUPER + C", desc: "Island hub (toggles, stats, media, lists)" },
         { keys: "SUPER + V", desc: "Clipboard history" },
         { keys: "SUPER + T", desc: "Wallpaper picker (theme follows wallpaper)" },
         { keys: "SUPER + K", desc: "This cheatsheet" },

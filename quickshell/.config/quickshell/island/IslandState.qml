@@ -3,6 +3,7 @@ pragma Singleton
 import QtQuick
 import Quickshell
 import Quickshell.Hyprland
+import Quickshell.Io
 import Quickshell.Services.Notifications
 import ".."
 import "../services" as Svc
@@ -45,6 +46,7 @@ Singleton {
   }
   readonly property string timeText: wallClock.date ? Qt.formatDateTime(wallClock.date, "HH:mm") : ""
   readonly property string dateText: wallClock.date ? Qt.formatDateTime(wallClock.date, "ddd d MMM") : ""
+  readonly property string fullDate: wallClock.date ? Qt.formatDateTime(wallClock.date, "dddd, d MMMM") : ""
 
   // ---------------------------------------------------------------
   // Media (live services/Media facade over Mpris)
@@ -188,6 +190,7 @@ Singleton {
   readonly property int percent: Svc.Battery.percent
   readonly property bool charging: Svc.Battery.charging
   readonly property bool battAvailable: Svc.Battery.available
+  readonly property string battTimeText: Svc.Battery.timeText
   readonly property int battLevel: Math.max(0, Math.min(10, Math.floor(state.percent / 10)))
   readonly property string battGlyph: state.charging ? Icons.battCharging : Icons.battery[state.battLevel]
   readonly property string volGlyph: state.muted ? Icons.audioMuted
@@ -225,6 +228,18 @@ Singleton {
 
   readonly property bool btEnabled: Svc.Bluetooth.enabled
 
+  // Connected device name for the toggle sublabel ("" when none).
+  readonly property string btDevice: {
+    const a = Svc.Bluetooth.adapter;
+    if (!a || !a.devices)
+      return "";
+    const ds = a.devices.values;
+    for (let i = 0; i < ds.length; i++)
+      if (ds[i] && ds[i].connected)
+        return ds[i].name || "";
+    return "";
+  }
+
   function toggleBluetooth() {
     Svc.Bluetooth.toggleEnabled();
   }
@@ -248,6 +263,223 @@ Singleton {
     Svc.Notifs.toggleDnd();
   }
 
+  // ---------------------------------------------------------------
+  // Merged hub (SUPER+C control centre): sub-view, live stats, actions
+  // ---------------------------------------------------------------
+  property string hubView: "" // "" | "wifi" | "bluetooth"
+
+  // CPU/RAM/temp reuse Sys's already-running pollers — no new pollers.
+  readonly property int cpuPct: Math.round(Sys.cpu)
+  readonly property int memPct: Sys.memPct
+  readonly property string memStr: Sys.memUsed.toFixed(1) + " / " + Sys.memTotal.toFixed(1) + " GB"
+  readonly property int tempC: Math.round(Sys.temp)
+
+  // One-shot reads, refreshed every time the hub opens.
+  property string uptimeStr: ""
+  property int diskPct: 0
+  property string diskStr: ""
+  property string cpuGhz: ""
+  property string fanStr: ""
+  property string kbLayout: ""
+  property string netStr: "↓ —  ↑ —"
+  property double prevRx: -1
+  property double prevTx: -1
+  property double prevNetT: 0
+
+  function setHubView(v) {
+    const want = (v === "wifi" || v === "bluetooth") ? v : "";
+    state.hubView = want;
+    // WifiPanel/BluetoothPanel gate keyboard on ShellState.centerView.
+    if (ShellState.centerView !== (want === "" ? "main" : want))
+      ShellState.centerView = want === "" ? "main" : want;
+  }
+
+  function openHub(view) {
+    if (state.legacyActive)
+      ShellState.closeAllPopups();
+    state.demoKind = "";
+    state.clearToast();
+    state.setHubView(view || "");
+    state.userFace = "hub";
+    state.markPos();
+    state.refreshHubStats();
+  }
+
+  function toggleHub() {
+    if (state.userFace === "hub" && state.hubView === "")
+      state.hide();
+    else
+      state.openHub("");
+  }
+
+  // Hub quick actions — every binary below was verified on this box.
+  function shotScreen() {
+    Quickshell.execDetached({
+      command: ["hyprshot", "-m", "region", "-o", Quickshell.env("HOME") + "/Pictures/"]
+    });
+  }
+
+  function toggleRecord() {
+    Quickshell.execDetached({
+      command: ["sh", "-c", "if pgrep -x gpu-screen-recorder >/dev/null; then pkill -x gpu-screen-recorder; else gpu-screen-recorder -w screen -f \"$HOME/Videos/rec_$(date +%Y%m%d-%H%M%S).mp4\" >/dev/null 2>&1 & fi"]
+    });
+  }
+
+  function pickColor() {
+    Quickshell.execDetached({ command: ["hyprpicker", "-a"] });
+  }
+
+  function toggleNight() {
+    Theme.toggleNightLight();
+  }
+
+  function lockScreen() {
+    Quickshell.execDetached({ command: ["hyprlock"] });
+  }
+
+  function suspendNow() {
+    Quickshell.execDetached({ command: ["systemctl", "suspend"] });
+  }
+
+  function openSession() {
+    ShellState.toggleSession();
+  }
+
+  function refreshHubStats() {
+    uptimeProc.running = true;
+    diskProc.running = true;
+    ghzProc.running = true;
+    fanProc.running = true;
+    kbProc.running = true;
+  }
+
+  function pollNet() {
+    if (!netProc.running)
+      netProc.running = true;
+  }
+
+  function fmtRate(bps) {
+    if (bps >= 1000000)
+      return (bps / 1000000).toFixed(1) + "M";
+    if (bps >= 1000)
+      return Math.round(bps / 1000) + "K";
+    return Math.round(bps) + "B";
+  }
+
+  function parseUptime(text) {
+    const secs = Math.floor(Number(String(text).trim().split(/\s+/)[0]) || 0);
+    const h = Math.floor(secs / 3600), m = Math.floor((secs % 3600) / 60);
+    state.uptimeStr = h > 0 ? "Up " + h + "h " + m + "m" : "Up " + m + "m";
+  }
+
+  function parseDisk(text) {
+    const f = String(text).trim().split(/\s+/);
+    if (f.length < 3)
+      return;
+    state.diskStr = f[1].replace(/G$/, "") + " / " + f[0].replace(/G$/, "") + " GB";
+    const p = parseInt(f[2]);
+    if (!isNaN(p))
+      state.diskPct = Math.max(0, Math.min(100, p));
+  }
+
+  function parseNetDev(text) {
+    let rx = 0, tx = 0;
+    const lines = String(text).split("\n");
+    for (let i = 0; i < lines.length; i++) {
+      const m = lines[i].match(/^\s*([^:]+):\s*(.*)$/);
+      if (!m || m[1] === "lo")
+        continue;
+      const f = m[2].trim().split(/\s+/);
+      if (f.length < 9)
+        continue;
+      rx += Number(f[0]) || 0;
+      tx += Number(f[8]) || 0;
+    }
+    const now = Date.now();
+    if (state.prevRx >= 0 && now > state.prevNetT) {
+      const dt = (now - state.prevNetT) / 1000;
+      state.netStr = "↓ " + state.fmtRate((rx - state.prevRx) / dt)
+        + "  ↑ " + state.fmtRate((tx - state.prevTx) / dt);
+    }
+    state.prevRx = rx;
+    state.prevTx = tx;
+    state.prevNetT = now;
+  }
+
+  function parseKb(text) {
+    try {
+      const o = JSON.parse(text);
+      const kbs = o.keyboards || [];
+      let kb = null;
+      for (let i = 0; i < kbs.length; i++)
+        if (kbs[i].main) {
+          kb = kbs[i];
+          break;
+        }
+      if (!kb && kbs.length > 0)
+        kb = kbs[0];
+      const layout = kb ? (kb.active_keymap || "") : "";
+      const m = String(layout).match(/\(([^)]+)\)/);
+      state.kbLayout = m ? m[1] : "";
+    } catch (e) {
+      state.kbLayout = "";
+    }
+  }
+
+  // One-shot collectors: fire on hub open only, never poll.
+  Process {
+    id: uptimeProc
+    command: ["cat", "/proc/uptime"]
+    stdout: StdioCollector {
+      onStreamFinished: state.parseUptime(this.text)
+    }
+  }
+
+  Process {
+    id: diskProc
+    command: ["sh", "-c", "df -B1G / | awk 'NR==2{print $2, $3, $5}'"]
+    stdout: StdioCollector {
+      onStreamFinished: state.parseDisk(this.text)
+    }
+  }
+
+  Process {
+    id: ghzProc
+    command: ["sh", "-c", "cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq 2>/dev/null || true"]
+    stdout: StdioCollector {
+      onStreamFinished: {
+        const khz = Number(String(this.text).trim()) || 0;
+        state.cpuGhz = khz > 0 ? (khz / 1000000).toFixed(1) + " GHz" : "";
+      }
+    }
+  }
+
+  Process {
+    id: fanProc
+    command: ["sh", "-c", "for f in /sys/class/hwmon/hwmon*/fan*_input; do [ -r \"$f\" ] && { cat \"$f\"; break; }; done 2>/dev/null || true"]
+    stdout: StdioCollector {
+      onStreamFinished: {
+        const rpm = parseInt(String(this.text).trim());
+        state.fanStr = !isNaN(rpm) && rpm > 0 ? rpm + " rpm" : "";
+      }
+    }
+  }
+
+  Process {
+    id: kbProc
+    command: ["hyprctl", "devices", "-j"]
+    stdout: StdioCollector {
+      onStreamFinished: state.parseKb(this.text)
+    }
+  }
+
+  Process {
+    id: netProc
+    command: ["cat", "/proc/net/dev"]
+    stdout: StdioCollector {
+      onStreamFinished: state.parseNetDev(this.text)
+    }
+  }
   // ---------------------------------------------------------------
   // Toast + notification state
   // ---------------------------------------------------------------
@@ -289,9 +521,10 @@ Singleton {
     demo: true
   })
 
-  readonly property var notifToShow: state.demoKind === "notification" || state.demoKind === "urgent"
-    ? state.demoNotifObj
-    : ((!state.enableNotifications || state.legacyActive || state.demoKind !== "") ? null : state.latestNotif)
+  // Live notifications render in the top-right popup stack, never in
+  // the island (no double-display). Demo path stays for testing.
+  readonly property var notifToShow: (state.demoKind === "notification" || state.demoKind === "urgent")
+    ? state.demoNotifObj : null
 
   readonly property bool notifUrgent: {
     const n = state.notifToShow;
@@ -427,6 +660,7 @@ Singleton {
 
   function collapse() {
     state.userFace = "";
+    state.hubView = "";
     state.demoKind = "";
     state.clearToast();
     if (ShellState.islandMode !== "")
@@ -484,16 +718,14 @@ Singleton {
       state.collapse();
       return;
     }
-    if (ShellState.islandMode !== "")
-      ShellState.closeAllPopups();
-    state.demoKind = "";
-    state.clearToast();
-    state.userFace = "hub";
+    state.openHub("");
   }
 
-  function open(s) {
+  function show(s) {
     const k = (s || "").toLowerCase();
-    if (k === "hub" || k === "media") {
+    if (k === "hub") {
+      state.openHub("");
+    } else if (k === "media") {
       if (ShellState.islandMode !== "")
         ShellState.closeAllPopups();
       state.demoKind = "";
@@ -510,6 +742,7 @@ Singleton {
   function hide() {
     const n = state.notifToShow;
     state.userFace = "";
+    state.hubView = "";
     state.demoKind = "";
     state.clearToast();
     if (n && !n.demo)

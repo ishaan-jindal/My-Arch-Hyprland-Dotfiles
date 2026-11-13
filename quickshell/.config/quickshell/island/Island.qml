@@ -41,58 +41,179 @@ Item {
     }
   }
 
-  // Hub toggle: 42px circle + 12px label (QuickToggle's 9px label
-  // grazes at this size; the shared component itself is untouched).
-  component HubToggle: Column {
-    id: toggleRoot
+  // Hub toggle card: opaque base + tint overlay (visually solid),
+  // icon + label + live sublabel, optional chevron to a list view.
+  component HubCard: Rectangle {
+    id: cardRoot
     required property string icon
     required property string caption
+    required property string sub
     required property bool isOn
     required property color tint
+    property bool expandable: false
     signal activated()
+    signal expanded()
 
-    spacing: 4
+    radius: 14
+    color: IslandTheme.surfaceHigh
+    border.color: cardRoot.activeFocus ? Theme.bright
+      : cardRoot.isOn ? cardRoot.tint : Qt.rgba(1, 1, 1, 0.12)
+    border.width: 1
+    activeFocusOnTab: true
 
+    // Tinted active state: translucent overlay on an opaque base.
     Rectangle {
-      id: circle
-      width: 42
-      height: 42
-      radius: 21
-      anchors.horizontalCenter: parent.horizontalCenter
-      color: toggleRoot.isOn
-        ? Qt.rgba(toggleRoot.tint.r, toggleRoot.tint.g, toggleRoot.tint.b, 0.22) : "transparent"
-      border.color: circle.activeFocus ? Theme.bright
-        : toggleRoot.isOn ? toggleRoot.tint : Qt.rgba(1, 1, 1, 0.12)
-      border.width: 1
-      activeFocusOnTab: true
+      anchors.fill: parent
+      radius: parent.radius
+      color: cardRoot.tint
+      opacity: cardRoot.isOn ? 0.22 : 0
+    }
 
-      Text {
-        anchors.centerIn: parent
-        text: toggleRoot.icon
-        color: toggleRoot.isOn ? toggleRoot.tint : Theme.fg
-        font.family: Theme.fontFamily
-        font.pixelSize: 18
-      }
+    Keys.onSpacePressed: cardRoot.activated()
+    Keys.onReturnPressed: cardRoot.activated()
 
-      Keys.onSpacePressed: toggleRoot.activated()
-      Keys.onReturnPressed: toggleRoot.activated()
-
-      MouseArea {
-        anchors.fill: parent
-        cursorShape: Qt.PointingHandCursor
-        onClicked: {
-          circle.forceActiveFocus();
-          toggleRoot.activated();
-        }
+    MouseArea {
+      anchors.fill: parent
+      cursorShape: Qt.PointingHandCursor
+      onClicked: {
+        cardRoot.forceActiveFocus();
+        cardRoot.activated();
       }
     }
 
-    Text {
-      anchors.horizontalCenter: parent.horizontalCenter
-      text: toggleRoot.caption
-      color: toggleRoot.isOn ? toggleRoot.tint : IslandTheme.textSecondary
-      font.family: IslandTheme.fontFamily
-      font.pixelSize: 12
+    Row {
+      anchors.fill: parent
+      anchors.margins: 8
+      spacing: 6
+
+      Text {
+        anchors.verticalCenter: parent.verticalCenter
+        text: cardRoot.icon
+        color: cardRoot.isOn ? cardRoot.tint : Theme.fg
+        font.family: Theme.fontFamily
+        font.pixelSize: 17
+      }
+
+      Column {
+        width: parent.width - (cardRoot.expandable ? 58 : 40)
+        anchors.verticalCenter: parent.verticalCenter
+        spacing: 1
+
+        Text {
+          width: parent.width
+          text: cardRoot.caption
+          color: cardRoot.isOn ? cardRoot.tint : IslandTheme.text
+          font.family: IslandTheme.fontFamily
+          font.pixelSize: 12
+          font.weight: Font.DemiBold
+          elide: Text.ElideRight
+          maximumLineCount: 1
+        }
+
+        Text {
+          width: parent.width
+          text: cardRoot.sub
+          color: IslandTheme.textSecondary
+          font.family: IslandTheme.fontFamily
+          font.pixelSize: 10
+          elide: Text.ElideRight
+          maximumLineCount: 1
+        }
+      }
+
+      Text {
+        anchors.verticalCenter: parent.verticalCenter
+        text: "›"
+        color: IslandTheme.textSecondary
+        font.family: IslandTheme.fontFamily
+        font.pixelSize: 14
+        font.weight: Font.DemiBold
+        visible: cardRoot.expandable
+
+        MouseArea {
+          anchors.fill: parent
+          anchors.margins: -8
+          cursorShape: Qt.PointingHandCursor
+          onClicked: (mouse) => {
+            mouse.accepted = true;
+            cardRoot.expanded();
+          }
+        }
+      }
+    }
+  }
+
+  // Stat card: opaque base, canvas ring, value + label + sub.
+  component RingCard: Rectangle {
+    id: ringRoot
+    required property string title
+    required property string sub
+    required property string center
+    required property real frac
+    required property color ringColor
+
+    radius: 14
+    color: IslandTheme.surfaceHigh
+    border.color: Qt.rgba(1, 1, 1, 0.12)
+    border.width: 1
+
+    Column {
+      anchors.centerIn: parent
+      spacing: 2
+
+      Item {
+        width: 46
+        height: 46
+        anchors.horizontalCenter: parent.horizontalCenter
+
+        Canvas {
+          anchors.fill: parent
+          onPaint: {
+            const ctx = getContext("2d");
+            ctx.reset();
+            const cx = width / 2, cy = height / 2, r = width / 2 - 3;
+            ctx.lineWidth = 4;
+            ctx.strokeStyle = "rgba(255,255,255,0.15)";
+            ctx.beginPath();
+            ctx.arc(cx, cy, r, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.strokeStyle = ringRoot.ringColor;
+            ctx.beginPath();
+            ctx.arc(cx, cy, r, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * Math.max(0, Math.min(1, ringRoot.frac)));
+            ctx.stroke();
+          }
+          Component.onCompleted: {
+            ringRoot.fracChanged.connect(requestPaint);
+            requestPaint();
+          }
+        }
+
+        Text {
+          anchors.centerIn: parent
+          text: ringRoot.center
+          color: IslandTheme.text
+          font.family: IslandTheme.fontFamily
+          font.pixelSize: 12
+          font.weight: Font.DemiBold
+        }
+      }
+
+      Text {
+        anchors.horizontalCenter: parent.horizontalCenter
+        text: ringRoot.title
+        color: IslandTheme.text
+        font.family: IslandTheme.fontFamily
+        font.pixelSize: 11
+        font.weight: Font.DemiBold
+      }
+
+      Text {
+        anchors.horizontalCenter: parent.horizontalCenter
+        text: ringRoot.sub
+        color: IslandTheme.textSecondary
+        font.family: IslandTheme.fontFamily
+        font.pixelSize: 9
+      }
     }
   }
 
@@ -150,7 +271,7 @@ Item {
     : island.face === "toast" ? IslandTheme.toastH
     : island.face === "notification" ? IslandTheme.notifH
     : island.face === "media" ? IslandTheme.mediaH
-    : island.face === "hub" ? IslandTheme.hubH
+    : island.face === "hub" ? (IslandState.hubView !== "" ? IslandTheme.hubListH : IslandTheme.hubH)
     : island.face === "legacy"
       ? IslandTheme.legacyHeaderH + island.legacyContentH() + IslandTheme.legacyMargin * 2
       : IslandTheme.idleH
@@ -867,113 +988,127 @@ Item {
         anchors.fill: parent
         anchors.margins: 14
         spacing: 5
+        visible: IslandState.hubView === ""
 
+        // Header: date over big time left, green battery card right.
         Item {
           width: parent.width
-          height: 36
+          height: 52
 
           Column {
             anchors.left: parent.left
             anchors.verticalCenter: parent.verticalCenter
+            spacing: 2
+
+            Text {
+              text: IslandState.fullDate
+              color: IslandTheme.textSecondary
+              font.family: IslandTheme.fontFamily
+              font.pixelSize: 12
+            }
 
             Text {
               text: IslandState.timeText
               color: IslandTheme.text
               font.family: IslandTheme.fontFamily
-              font.pixelSize: IslandTheme.bigSize
+              font.pixelSize: 22
               font.weight: Font.DemiBold
-            }
-
-            Text {
-              text: IslandState.dateText
-              color: IslandTheme.textSecondary
-              font.family: IslandTheme.fontFamily
-              font.pixelSize: 11
             }
           }
 
-          Item {
-            id: battRing
-            width: 36
-            height: 36
+          Rectangle {
+            width: 150
+            height: 52
+            radius: 14
             anchors.right: parent.right
             anchors.verticalCenter: parent.verticalCenter
+            color: IslandTheme.surfaceHigh
+            border.color: IslandState.charging ? IslandTheme.green : Qt.rgba(1, 1, 1, 0.12)
+            border.width: 1
             visible: IslandState.battAvailable
 
-            Canvas {
-              id: ring
+            Rectangle {
               anchors.fill: parent
-              onPaint: {
-                const ctx = getContext("2d");
-                ctx.reset();
-                const cx = width / 2, cy = height / 2, r = width / 2 - 2;
-                ctx.lineWidth = 3;
-                ctx.strokeStyle = "rgba(255,255,255,0.15)";
-                ctx.beginPath();
-                ctx.arc(cx, cy, r, 0, Math.PI * 2);
-                ctx.stroke();
-                ctx.strokeStyle = IslandState.charging ? IslandTheme.green : IslandTheme.accent;
-                ctx.beginPath();
-                ctx.arc(cx, cy, r, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * IslandState.percent / 100);
-                ctx.stroke();
-              }
-              Component.onCompleted: {
-                IslandState.percentChanged.connect(requestPaint);
-                IslandState.chargingChanged.connect(requestPaint);
-              }
+              radius: parent.radius
+              color: IslandTheme.green
+              opacity: IslandState.charging ? 0.18 : 0.08
             }
 
-            Text {
-              anchors.centerIn: parent
-              text: IslandState.percent
-              color: IslandTheme.text
-              font.family: IslandTheme.fontFamily
-              font.pixelSize: 10
-              font.weight: Font.DemiBold
-            }
-          }
+            Column {
+              anchors.left: parent.left
+              anchors.leftMargin: 12
+              anchors.verticalCenter: parent.verticalCenter
+              spacing: 1
 
-          Text {
-            anchors.right: parent.right
-            anchors.rightMargin: battRing.visible ? 48 : 0
-            anchors.verticalCenter: parent.verticalCenter
-            width: Math.min(implicitWidth, 150)
-            text: IslandState.ssid !== "" ? IslandState.ssid : "Offline"
-            color: IslandTheme.textSecondary
-            font.family: IslandTheme.fontFamily
-            font.pixelSize: 11
-            elide: Text.ElideRight
-            maximumLineCount: 1
-            horizontalAlignment: Text.AlignRight
+              Text {
+                text: IslandState.percent + "%"
+                color: IslandTheme.text
+                font.family: IslandTheme.fontFamily
+                font.pixelSize: 17
+                font.weight: Font.DemiBold
+              }
+
+              Text {
+                width: 126
+                text: IslandState.battTimeText
+                color: IslandTheme.textSecondary
+                font.family: IslandTheme.fontFamily
+                font.pixelSize: 11
+                elide: Text.ElideRight
+                maximumLineCount: 1
+              }
+            }
           }
         }
 
         Row {
           width: parent.width
+          height: 62
           spacing: 8
 
-          HubToggle {
-            width: (parent.width - 16) / 3
+          HubCard {
+            width: (parent.width - 24) / 4
+            height: parent.height
             icon: Icons.wifi
             caption: "Wi-Fi"
+            sub: !IslandState.wifiEnabled ? "Off" : (IslandState.ssid !== "" ? IslandState.ssid : "On")
             isOn: IslandState.wifiEnabled
             tint: IslandTheme.accent
+            expandable: true
             onActivated: IslandState.toggleWifi()
+            onExpanded: IslandState.setHubView("wifi")
           }
 
-          HubToggle {
-            width: (parent.width - 16) / 3
+          HubCard {
+            width: (parent.width - 24) / 4
+            height: parent.height
             icon: Icons.bluetooth
             caption: "Bluetooth"
+            sub: !IslandState.btEnabled ? "Off" : (IslandState.btDevice !== "" ? IslandState.btDevice : "On")
             isOn: IslandState.btEnabled
             tint: IslandTheme.accent
+            expandable: true
             onActivated: IslandState.toggleBluetooth()
+            onExpanded: IslandState.setHubView("bluetooth")
           }
 
-          HubToggle {
-            width: (parent.width - 16) / 3
+          HubCard {
+            width: (parent.width - 24) / 4
+            height: parent.height
+            icon: Icons.moon
+            caption: "Night"
+            sub: Sys.nightLight ? "On" : "Off"
+            isOn: Sys.nightLight
+            tint: IslandTheme.orange
+            onActivated: Theme.toggleNightLight()
+          }
+
+          HubCard {
+            width: (parent.width - 24) / 4
+            height: parent.height
             icon: IslandState.dnd ? Icons.bellSlash : Icons.bell
-            caption: "DND"
+            caption: "Focus"
+            sub: IslandState.dnd ? "On" : "Off"
             isOn: IslandState.dnd
             tint: IslandTheme.red
             onActivated: IslandState.toggleDnd()
@@ -1054,6 +1189,182 @@ Item {
           }
         }
 
+        // Stat rings: CPU / RAM / Temp / Disk (Sys pollers already run;
+        // disk + GHz + fan are one-shots refreshed on hub open).
+        Row {
+          width: parent.width
+          height: 92
+          spacing: 8
+
+          RingCard {
+            width: (parent.width - 24) / 4
+            height: parent.height
+            title: "CPU"
+            center: String(IslandState.cpuPct)
+            frac: IslandState.cpuPct / 100
+            sub: IslandState.cpuGhz
+            ringColor: IslandTheme.accent
+          }
+
+          RingCard {
+            width: (parent.width - 24) / 4
+            height: parent.height
+            title: "RAM"
+            center: String(IslandState.memPct)
+            frac: IslandState.memPct / 100
+            sub: IslandState.memStr
+            ringColor: IslandTheme.green
+          }
+
+          RingCard {
+            width: (parent.width - 24) / 4
+            height: parent.height
+            title: "Temp"
+            center: IslandState.tempC + "°"
+            frac: IslandState.tempC / 100
+            sub: IslandState.fanStr
+            ringColor: IslandTheme.orange
+          }
+
+          RingCard {
+            width: (parent.width - 24) / 4
+            height: parent.height
+            title: "Disk"
+            center: String(IslandState.diskPct)
+            frac: IslandState.diskPct / 100
+            sub: IslandState.diskStr
+            ringColor: IslandTheme.yellow
+          }
+        }
+
+
+        // Quick actions: Night / Lock / Sleep / Power.
+        Row {
+          width: parent.width
+          height: 62
+          spacing: 8
+
+          component HubAction: Column {
+            id: actionRoot
+            required property string icon
+            required property string caption
+            required property bool red
+            signal fired()
+            spacing: 2
+            width: parent ? (parent.width - 24) / 4 : 49
+
+            Rectangle {
+              width: 46
+              height: 46
+              radius: 12
+              anchors.horizontalCenter: parent.horizontalCenter
+              color: IslandTheme.surfaceHigh
+              border.color: Qt.rgba(1, 1, 1, 0.12)
+              border.width: 1
+
+              Text {
+                anchors.centerIn: parent
+                text: actionRoot.icon
+                color: actionRoot.red ? IslandTheme.red : IslandTheme.text
+                font.family: actionRoot.red ? IslandTheme.fontFamily : Theme.fontFamily
+                font.pixelSize: actionRoot.red ? 16 : 20
+                font.weight: actionRoot.red ? Font.DemiBold : Font.Normal
+              }
+
+              MouseArea {
+                anchors.fill: parent
+                cursorShape: Qt.PointingHandCursor
+                onClicked: actionRoot.fired()
+              }
+            }
+
+            Text {
+              anchors.horizontalCenter: parent.horizontalCenter
+              text: actionRoot.caption
+              color: IslandTheme.textSecondary
+              font.family: IslandTheme.fontFamily
+              font.pixelSize: 10
+            }
+          }
+
+
+
+
+          HubAction {
+            icon: Icons.moon
+            caption: "Night"
+            red: false
+            onFired: IslandState.toggleNight()
+          }
+
+          HubAction {
+            icon: Icons.lock
+            caption: "Lock"
+            red: false
+            onFired: IslandState.lockScreen()
+          }
+
+          HubAction {
+            icon: Icons.snowflake
+            caption: "Sleep"
+            red: false
+            onFired: IslandState.suspendNow()
+          }
+
+          HubAction {
+            icon: Icons.power
+            caption: "Power"
+            red: false
+            onFired: IslandState.openSession()
+          }
+        }
+
+        // Footer: uptime + net rates left, keyboard layout right.
+        Item {
+          width: parent.width
+          height: 18
+
+          Text {
+            anchors.left: parent.left
+            anchors.verticalCenter: parent.verticalCenter
+            text: IslandState.uptimeStr + "  ·  " + IslandState.netStr
+            color: IslandTheme.textSecondary
+            font.family: IslandTheme.fontFamily
+            font.pixelSize: 11
+          }
+
+          Text {
+            anchors.right: parent.right
+            anchors.verticalCenter: parent.verticalCenter
+            text: IslandState.kbLayout
+            color: IslandTheme.textSecondary
+            font.family: IslandTheme.fontFamily
+            font.pixelSize: 11
+            font.weight: Font.DemiBold
+            visible: IslandState.kbLayout !== ""
+          }
+        }
+      }
+
+      // Wi-Fi / Bluetooth full lists: replace the merged view, back
+      // button inside each panel returns here. No feature loss.
+      Item {
+        anchors.fill: parent
+        visible: island.face === "hub" && IslandState.hubView !== ""
+
+        C.WifiPanel {
+          anchors.fill: parent
+          anchors.margins: 12
+          visible: IslandState.hubView === "wifi"
+          onRequestBack: IslandState.setHubView("")
+        }
+
+        C.BluetoothPanel {
+          anchors.fill: parent
+          anchors.margins: 12
+          visible: IslandState.hubView === "bluetooth"
+          onRequestBack: IslandState.setHubView("")
+        }
       }
     }
 
@@ -1169,6 +1480,8 @@ Item {
   Keys.onEscapePressed: {
     if (island.legacyMode === "controls" && ShellState.centerView !== "main")
       ShellState.centerBack();
+    else if (island.face === "hub" && IslandState.hubView !== "")
+      IslandState.setHubView("");
     else
       IslandState.collapse();
   }
@@ -1180,6 +1493,15 @@ Item {
     repeat: true
     running: island.face === "media" && IslandState.isPlaying && IslandState.canSeek && IslandState.length > 0
     onTriggered: IslandState.tickSeek()
+  }
+
+  // Network rates: 1s sampler, only while the hub face is shown.
+  Timer {
+    id: netTick
+    interval: 1000
+    repeat: true
+    running: island.face === "hub"
+    onTriggered: IslandState.pollNet()
   }
 
   onFaceChanged: {

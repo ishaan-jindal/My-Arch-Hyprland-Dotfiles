@@ -11,4 +11,7 @@ Singleton {
   readonly property bool available: Sys.hasBattery
   readonly property int percent: Sys.batteryPct
   readonly property bool charging: Sys.batteryCharging
+
+  // "Full in 38 min" / "2h 5m left" / "Full" (Sys owns the UPower math).
+  readonly property string timeText: Sys.batteryTimeText()
 }
