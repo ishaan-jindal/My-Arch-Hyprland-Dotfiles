@@ -36,6 +36,8 @@ Item {
       enabled: !IslandState.reduceMotion
       NumberAnimation {
         duration: faceRoot.shown ? IslandTheme.fadeInMs : IslandTheme.fadeOutMs
+        // Sequential fade: out finishes before the incoming face starts.
+        delay: faceRoot.shown ? IslandTheme.fadeDelayMs : 0
         easing.type: Easing.OutCubic
       }
     }
@@ -224,7 +226,8 @@ Item {
   function legacyContentH() {
     switch (island.legacyMode) {
     case "controls":
-      return 320;
+      // Main view is ~200px of content; the wifi/BT panels fill 320.
+      return ShellState.centerView === "main" ? 240 : 320;
     case "launcher":
       return 400;
     case "picker":
@@ -346,7 +349,8 @@ Item {
     anchors.horizontalCenter: parent.horizontalCenter
     width: island.targetW
     height: island.hShown
-    clip: wSpring.running || hSpring.running
+    // Content clipping lives on the faces box below; clipping the pill
+    // itself would shear the background shadow during springs.
 
     Behavior on width {
       enabled: !island.rm
@@ -391,14 +395,16 @@ Item {
         }
       }
 
-      layer.enabled: IslandState.expanded || (island.face !== "idle" && island.face !== "activity")
+      // Always layered: toggling layer.enabled made the shadow blink as
+      // faces changed. One recipe, shared with the island chrome.
+      layer.enabled: true
       layer.effect: MultiEffect {
         shadowEnabled: true
         shadowColor: "#000000"
         shadowBlur: 0.8
-        shadowOpacity: 0.5
+        shadowOpacity: 0.35
         shadowHorizontalOffset: 0
-        shadowVerticalOffset: 6
+        shadowVerticalOffset: 4
       }
     }
 
@@ -442,387 +448,903 @@ Item {
       }
     }
 
-    // ---- idle: compact clock --------------------------------
-    Face {
+    // Faces sit in their own clip box: the pill clips content mid-spring
+    // without ever clipping the background shadow.
+    Item {
+      id: facesContainer
       anchors.fill: parent
-      shown: island.face === "idle"
+      clip: wSpring.running || hSpring.running
 
-      Row {
+      // ---- idle: compact clock --------------------------------
+      Face {
+        width: island.baseW
+        height: island.baseH
         anchors.centerIn: parent
-        spacing: 6
+        shown: island.face === "idle"
 
-        Text {
-          anchors.verticalCenter: parent.verticalCenter
-          text: IslandState.timeText
-          color: IslandTheme.text
-          font.family: IslandTheme.fontFamily
-          font.pixelSize: IslandTheme.compactSize
-          font.weight: Font.DemiBold
-        }
-
-        Rectangle {
-          anchors.verticalCenter: parent.verticalCenter
-          width: 6
-          height: 6
-          radius: 3
-          color: IslandTheme.orange
-          visible: IslandState.dnd
-        }
-      }
-    }
-
-    // ---- activity: art + title + AudioBars -----------------------
-    Face {
-      anchors.fill: parent
-      shown: island.face === "activity"
-
-      // Sequential cluster: art | title | bars, packed left with
-      // fixed gaps — short titles leave trailing space at the pill
-      // edge, never a void between title and bars.
-      Row {
-        anchors.left: parent.left
-        anchors.leftMargin: 6
-        anchors.verticalCenter: parent.verticalCenter
-        spacing: 10
-
-        Item {
-          width: 22
-          height: 22
-          anchors.verticalCenter: parent.verticalCenter
-
-          Rectangle {
-            anchors.fill: parent
-            radius: 6
-            color: IslandTheme.surfaceHigh
-          }
-
-          Image {
-            id: actArt
-            anchors.fill: parent
-            source: IslandState.artUrl
-            fillMode: Image.PreserveAspectCrop
-            visible: IslandState.artUrl !== "" && status === Image.Ready
-          }
+        Row {
+          anchors.centerIn: parent
+          spacing: 6
 
           Text {
-            anchors.centerIn: parent
-            text: (IslandState.title || "?").charAt(0).toUpperCase()
-            color: IslandTheme.textSecondary
-            font.family: IslandTheme.fontFamily
-            font.pixelSize: 12
-            font.weight: Font.DemiBold
-            visible: !actArt.visible
-          }
-
-          // Charger ring: green arc around the art while charging.
-          Rectangle {
-            anchors.fill: parent
-            radius: 6
-            color: "transparent"
-            border.color: IslandTheme.green
-            border.width: 1.5
-            visible: IslandState.charging && IslandState.battAvailable
-          }
-        }
-
-        // Title hugs its content up to 150px, then marquees while playing.
-        Item {
-          width: Math.min(actTitle.implicitWidth, 150)
-          height: 22
-          clip: true
-
-          Text {
-            id: actTitle
             anchors.verticalCenter: parent.verticalCenter
-            anchors.verticalCenterOffset: -1
-            text: IslandState.title !== "" ? IslandState.title : "Nothing playing"
+            text: IslandState.timeText
             color: IslandTheme.text
             font.family: IslandTheme.fontFamily
             font.pixelSize: IslandTheme.compactSize
             font.weight: Font.DemiBold
-
-            NumberAnimation on x {
-              id: actMarq
-              from: 0
-              to: -(actTitle.implicitWidth - 150)
-              duration: Math.max(1200, actTitle.implicitWidth * 30)
-              loops: Animation.Infinite
-              running: actTitle.implicitWidth > 150 && IslandState.isPlaying
-                && island.face === "activity" && !island.rm
-              onRunningChanged: {
-                if (!running)
-                  actTitle.x = 0;
-              }
-            }
           }
-        }
-
-        // AudioBars: grounded in the 22px row box, frozen unless playing.
-        Row {
-          spacing: 2
-          height: 22
-
-          Repeater {
-            model: 4
-
-            delegate: Rectangle {
-              required property int index
-              width: 3
-              height: 7
-              radius: 1.5
-              color: IslandTheme.accent
-              anchors.bottom: parent.bottom
-
-              SequentialAnimation on height {
-                loops: Animation.Infinite
-                running: island.face === "activity" && IslandState.isPlaying && !island.rm
-                NumberAnimation {
-                  to: 13
-                  duration: 260 + index * 70
-                  easing.type: Easing.InOutQuad
-                }
-                NumberAnimation {
-                  to: 5
-                  duration: 260 + index * 70
-                  easing.type: Easing.InOutQuad
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-
-    // ---- toast: volume / brightness / ws-dots --------------------
-    Face {
-      id: toastFace
-      anchors.fill: parent
-      shown: island.face === "toast"
-
-      readonly property bool demoToast: island.display.indexOf("demo:") === 0
-
-      MouseArea {
-        anchors.fill: parent
-        onClicked: IslandState.clearToast()
-      }
-
-      // OSD path: icon+label row centered as a group, level bar
-      // centered in the capsule independent of the label row.
-      Column {
-        anchors.centerIn: parent
-        spacing: 6
-        visible: ShellState.osdVisible || toastFace.demoToast
-
-        Row {
-          anchors.horizontalCenter: parent.horizontalCenter
-          spacing: 10
-
-          Text {
-            anchors.verticalCenter: parent.verticalCenter
-            // Glyph ink verified centered against the 12px Inter label (1x).
-            anchors.verticalCenterOffset: 0
-            text: toastFace.demoToast ? IslandState.volGlyph : IslandState.osdIcon()
-            color: IslandTheme.text
-            font.family: Theme.fontFamily
-            font.pixelSize: 20
-            renderType: Text.QtRendering
-          }
-
-          Text {
-            id: toastLabel
-            anchors.verticalCenter: parent.verticalCenter
-            text: toastFace.demoToast ? "Volume  65%" : IslandState.osdLabel()
-            color: IslandTheme.text
-            font.family: IslandTheme.fontFamily
-            font.pixelSize: IslandTheme.secondarySize
-            font.weight: Font.DemiBold
-            elide: Text.ElideRight
-            maximumLineCount: 1
-          }
-        }
-
-        Rectangle {
-          width: 272
-          height: 5
-          radius: 2.5
-          anchors.horizontalCenter: parent.horizontalCenter
-          color: Qt.rgba(1, 1, 1, 0.35)
 
           Rectangle {
-            width: parent.width * (toastFace.demoToast ? 0.65 : ShellState.osdValue)
-            height: parent.height
-            radius: parent.radius
-            color: IslandTheme.accent
+            anchors.verticalCenter: parent.verticalCenter
+            width: 6
+            height: 6
+            radius: 3
+            color: IslandTheme.orange
+            visible: IslandState.dnd
+          }
+        }
+      }
 
-            Behavior on width {
-              NumberAnimation {
-                duration: island.rm ? 0 : 90
-                easing.type: Easing.OutCubic
+      // ---- activity: art + title + AudioBars -----------------------
+      Face {
+        width: island.baseW
+        height: island.baseH
+        anchors.centerIn: parent
+        shown: island.face === "activity"
+
+        // Sequential cluster: art | title | bars, packed left with
+        // fixed gaps — short titles leave trailing space at the pill
+        // edge, never a void between title and bars.
+        Row {
+          anchors.left: parent.left
+          anchors.leftMargin: 6
+          anchors.verticalCenter: parent.verticalCenter
+          spacing: 10
+
+          Item {
+            width: 22
+            height: 22
+            anchors.verticalCenter: parent.verticalCenter
+
+            Rectangle {
+              anchors.fill: parent
+              radius: 6
+              color: IslandTheme.surfaceHigh
+            }
+
+            Image {
+              id: actArt
+              anchors.fill: parent
+              source: IslandState.artUrl
+              fillMode: Image.PreserveAspectCrop
+              visible: IslandState.artUrl !== "" && status === Image.Ready
+            }
+
+            Text {
+              anchors.centerIn: parent
+              text: (IslandState.title || "?").charAt(0).toUpperCase()
+              color: IslandTheme.textSecondary
+              font.family: IslandTheme.fontFamily
+              font.pixelSize: 12
+              font.weight: Font.DemiBold
+              visible: !actArt.visible
+            }
+
+            // Charger ring: green arc around the art while charging.
+            Rectangle {
+              anchors.fill: parent
+              radius: 6
+              color: "transparent"
+              border.color: IslandTheme.green
+              border.width: 1.5
+              visible: IslandState.charging && IslandState.battAvailable
+            }
+          }
+
+          // Title hugs its content up to 150px, then marquees while playing.
+          Item {
+            width: Math.min(actTitle.implicitWidth, 150)
+            height: 22
+            clip: true
+
+            Text {
+              id: actTitle
+              anchors.verticalCenter: parent.verticalCenter
+              anchors.verticalCenterOffset: -1
+              text: IslandState.title !== "" ? IslandState.title : "Nothing playing"
+              color: IslandTheme.text
+              font.family: IslandTheme.fontFamily
+              font.pixelSize: IslandTheme.compactSize
+              font.weight: Font.DemiBold
+
+              NumberAnimation on x {
+                id: actMarq
+                from: 0
+                to: -(actTitle.implicitWidth - 150)
+                duration: Math.max(1200, actTitle.implicitWidth * 30)
+                loops: Animation.Infinite
+                running: actTitle.implicitWidth > 150 && IslandState.isPlaying
+                  && island.face === "activity" && !island.rm
+                onRunningChanged: {
+                  if (!running)
+                    actTitle.x = 0;
+                }
+              }
+            }
+          }
+
+          // AudioBars: grounded in the 22px row box, frozen unless playing.
+          Row {
+            spacing: 2
+            height: 22
+
+            Repeater {
+              model: 4
+
+              delegate: Rectangle {
+                required property int index
+                width: 3
+                height: 7
+                radius: 1.5
+                color: IslandTheme.accent
+                anchors.bottom: parent.bottom
+
+                SequentialAnimation on height {
+                  loops: Animation.Infinite
+                  running: island.face === "activity" && IslandState.isPlaying && !island.rm
+                  NumberAnimation {
+                    to: 13
+                    duration: 260 + index * 70
+                    easing.type: Easing.InOutQuad
+                  }
+                  NumberAnimation {
+                    to: 5
+                    duration: 260 + index * 70
+                    easing.type: Easing.InOutQuad
+                  }
+                }
               }
             }
           }
         }
       }
 
-      // Workspace-switch path: the 5-dot strip.
-      C.IslandWorkspaces {
+      // ---- toast: volume / brightness / ws-dots --------------------
+      Face {
+        id: toastFace
+        width: island.baseW
+        height: island.baseH
         anchors.centerIn: parent
-        barScreen: island.barScreen
-        dotSize: 8
-        visible: !ShellState.osdVisible && !toastFace.demoToast
-      }
-    }
+        shown: island.face === "toast"
 
-    // ---- notification: app avatar + summary + body ------------
-    Face {
-      id: notifFace
-      anchors.fill: parent
-      shown: island.face === "notification"
+        readonly property bool demoToast: island.display.indexOf("demo:") === 0
 
-      HoverHandler {
-        onHoveredChanged: IslandState.notifHover = hovered
-      }
-
-      // Click = default action; X = dismiss without acting.
-      MouseArea {
-        anchors.fill: parent
-        cursorShape: Qt.PointingHandCursor
-        onClicked: IslandState.notifActivate()
-      }
-
-      Row {
-        anchors.fill: parent
-        anchors.leftMargin: 14
-        anchors.rightMargin: 14
-        anchors.topMargin: 14
-        anchors.bottomMargin: 14
-        spacing: 10
-
-        Rectangle {
-          width: 40
-          height: 40
-          radius: 12
-          anchors.verticalCenter: parent.verticalCenter
-          color: IslandTheme.surfaceHigh
-
-          Text {
-            anchors.centerIn: parent
-            text: ((island.notif && island.notif.appName) || "?").charAt(0).toUpperCase()
-            color: IslandState.notifUrgent ? IslandTheme.red : IslandTheme.accent
-            font.family: IslandTheme.fontFamily
-            font.pixelSize: IslandTheme.bigSize
-            font.weight: Font.DemiBold
-          }
+        MouseArea {
+          anchors.fill: parent
+          onClicked: IslandState.clearToast()
         }
 
+        // OSD path: icon+label row centered as a group, level bar
+        // centered in the capsule independent of the label row.
         Column {
-          width: 250
-          anchors.verticalCenter: parent.verticalCenter
-          spacing: 2
+          anchors.centerIn: parent
+          spacing: 6
+          visible: ShellState.osdVisible || toastFace.demoToast
 
-          Text {
-            width: parent.width
-            // Generic senders (notify-send without -a, empty names) add no
-            // information — show the summary alone instead of "NOTIFY-SEND · …".
-            text: {
-              const n = island.notif;
-              const app = n && n.appName ? String(n.appName) : "";
-              const sum = n && n.summary ? String(n.summary) : "";
-              if (app === "" || app.toLowerCase() === "notify-send")
-                return sum;
-              return sum !== "" ? app.toUpperCase() + "  ·  " + sum : app.toUpperCase();
+          Row {
+            anchors.horizontalCenter: parent.horizontalCenter
+            spacing: 10
+
+            Text {
+              anchors.verticalCenter: parent.verticalCenter
+              // Glyph ink verified centered against the 12px Inter label (1x).
+              anchors.verticalCenterOffset: 0
+              text: toastFace.demoToast ? IslandState.volGlyph : IslandState.osdIcon()
+              color: IslandTheme.text
+              font.family: Theme.fontFamily
+              font.pixelSize: 20
+              renderType: Text.QtRendering
             }
-            color: IslandTheme.text
-            font.family: IslandTheme.fontFamily
-            font.pixelSize: IslandTheme.titleSize
-            font.weight: Font.DemiBold
-            elide: Text.ElideRight
-            maximumLineCount: 1
+
+            Text {
+              id: toastLabel
+              anchors.verticalCenter: parent.verticalCenter
+              text: toastFace.demoToast ? "Volume  65%" : IslandState.osdLabel()
+              color: IslandTheme.text
+              font.family: IslandTheme.fontFamily
+              font.pixelSize: IslandTheme.secondarySize
+              font.weight: Font.DemiBold
+              elide: Text.ElideRight
+              maximumLineCount: 1
+            }
           }
 
-          Text {
-            width: parent.width
-            text: island.notif && island.notif.body ? island.notif.body : ""
-            color: IslandTheme.textSecondary
-            font.family: IslandTheme.fontFamily
-            font.pixelSize: IslandTheme.secondarySize
-            elide: Text.ElideRight
-            maximumLineCount: 2
-            wrapMode: Text.WrapAtWordBoundaryOrAnywhere
-            lineHeight: 1.4
-            visible: text !== ""
-          }
-        }
+          Rectangle {
+            width: 272
+            height: 5
+            radius: 2.5
+            anchors.horizontalCenter: parent.horizontalCenter
+            color: Qt.rgba(1, 1, 1, 0.35)
 
-        Text {
-          anchors.verticalCenter: parent.verticalCenter
-          text: Icons.close
-          color: closeHover.hovered ? IslandTheme.red : IslandTheme.textSecondary
-          font.family: Theme.fontFamily
-          font.pixelSize: 12
+            Rectangle {
+              width: parent.width * (toastFace.demoToast ? 0.65 : ShellState.osdValue)
+              height: parent.height
+              radius: parent.radius
+              color: IslandTheme.accent
 
-          HoverHandler {
-            id: closeHover
-          }
-
-          MouseArea {
-            anchors.fill: parent
-            anchors.margins: -8
-            cursorShape: Qt.PointingHandCursor
-            onClicked: (mouse) => {
-              mouse.accepted = true;
-              IslandState.notifClose();
+              Behavior on width {
+                NumberAnimation {
+                  duration: island.rm ? 0 : 90
+                  easing.type: Easing.OutCubic
+                }
+              }
             }
           }
         }
+
+        // Workspace-switch path: the 5-dot strip.
+        C.IslandWorkspaces {
+          anchors.centerIn: parent
+          barScreen: island.barScreen
+          dotSize: 8
+          visible: !ShellState.osdVisible && !toastFace.demoToast
+        }
       }
-    }
 
-    // ---- expandedMedia: art + marquee + seek + transport ---------
-    Face {
-      anchors.fill: parent
-      shown: island.face === "media"
+      // ---- notification: app avatar + summary + body ------------
+      Face {
+        id: notifFace
+        width: island.baseW
+        height: island.baseH
+        anchors.centerIn: parent
+        shown: island.face === "notification"
 
-      Row {
-        anchors.fill: parent
-        anchors.margins: 16
-        spacing: 12
+        HoverHandler {
+          onHoveredChanged: IslandState.notifHover = hovered
+        }
 
-        Rectangle {
-          width: 96
-          height: 96
-          radius: 14
-          color: IslandTheme.surfaceHigh
-          clip: true
-          anchors.verticalCenter: parent.verticalCenter
+        // Click = default action; X = dismiss without acting.
+        MouseArea {
+          anchors.fill: parent
+          cursorShape: Qt.PointingHandCursor
+          onClicked: IslandState.notifActivate()
+        }
 
-          Image {
-            id: mediaArt
-            anchors.fill: parent
-            source: IslandState.artUrl
-            fillMode: Image.PreserveAspectCrop
-            visible: IslandState.artUrl !== "" && status === Image.Ready
+        Row {
+          anchors.fill: parent
+          anchors.leftMargin: 14
+          anchors.rightMargin: 14
+          anchors.topMargin: 14
+          anchors.bottomMargin: 14
+          spacing: 10
+
+          Rectangle {
+            width: 40
+            height: 40
+            radius: 12
+            anchors.verticalCenter: parent.verticalCenter
+            color: IslandTheme.surfaceHigh
+
+            Text {
+              anchors.centerIn: parent
+              text: ((island.notif && island.notif.appName) || "?").charAt(0).toUpperCase()
+              color: IslandState.notifUrgent ? IslandTheme.red : IslandTheme.accent
+              font.family: IslandTheme.fontFamily
+              font.pixelSize: IslandTheme.bigSize
+              font.weight: Font.DemiBold
+            }
+          }
+
+          Column {
+            width: 250
+            anchors.verticalCenter: parent.verticalCenter
+            spacing: 2
+
+            Text {
+              width: parent.width
+              // Generic senders (notify-send without -a, empty names) add no
+              // information — show the summary alone instead of "NOTIFY-SEND · …".
+              text: {
+                const n = island.notif;
+                const app = n && n.appName ? String(n.appName) : "";
+                const sum = n && n.summary ? String(n.summary) : "";
+                if (app === "" || app.toLowerCase() === "notify-send")
+                  return sum;
+                return sum !== "" ? app.toUpperCase() + "  ·  " + sum : app.toUpperCase();
+              }
+              color: IslandTheme.text
+              font.family: IslandTheme.fontFamily
+              font.pixelSize: IslandTheme.titleSize
+              font.weight: Font.DemiBold
+              elide: Text.ElideRight
+              maximumLineCount: 1
+            }
+
+            Text {
+              width: parent.width
+              text: island.notif && island.notif.body ? island.notif.body : ""
+              color: IslandTheme.textSecondary
+              font.family: IslandTheme.fontFamily
+              font.pixelSize: IslandTheme.secondarySize
+              elide: Text.ElideRight
+              maximumLineCount: 2
+              wrapMode: Text.WrapAtWordBoundaryOrAnywhere
+              lineHeight: 1.4
+              visible: text !== ""
+            }
           }
 
           Text {
-            anchors.centerIn: parent
-            text: (IslandState.title || "?").charAt(0).toUpperCase()
-            color: IslandTheme.textSecondary
-            font.family: IslandTheme.fontFamily
-            font.pixelSize: 34
-            font.weight: Font.DemiBold
-            visible: !mediaArt.visible
+            anchors.verticalCenter: parent.verticalCenter
+            text: Icons.close
+            color: closeHover.hovered ? IslandTheme.red : IslandTheme.textSecondary
+            font.family: Theme.fontFamily
+            font.pixelSize: 12
+
+            HoverHandler {
+              id: closeHover
+            }
+
+            MouseArea {
+              anchors.fill: parent
+              anchors.margins: -8
+              cursorShape: Qt.PointingHandCursor
+              onClicked: (mouse) => {
+                mouse.accepted = true;
+                IslandState.notifClose();
+              }
+            }
           }
         }
+      }
+
+      // ---- expandedMedia: art + marquee + seek + transport ---------
+      Face {
+        width: island.baseW
+        height: island.baseH
+        anchors.centerIn: parent
+        shown: island.face === "media"
+
+        Row {
+          anchors.fill: parent
+          anchors.margins: 16
+          spacing: 12
+
+          Rectangle {
+            width: 96
+            height: 96
+            radius: 14
+            color: IslandTheme.surfaceHigh
+            clip: true
+            anchors.verticalCenter: parent.verticalCenter
+
+            Image {
+              id: mediaArt
+              anchors.fill: parent
+              source: IslandState.artUrl
+              fillMode: Image.PreserveAspectCrop
+              visible: IslandState.artUrl !== "" && status === Image.Ready
+            }
+
+            Text {
+              anchors.centerIn: parent
+              text: (IslandState.title || "?").charAt(0).toUpperCase()
+              color: IslandTheme.textSecondary
+              font.family: IslandTheme.fontFamily
+              font.pixelSize: 34
+              font.weight: Font.DemiBold
+              visible: !mediaArt.visible
+            }
+          }
+
+          Column {
+            width: 280
+            anchors.verticalCenter: parent.verticalCenter
+            spacing: 4
+
+            // Player switcher: always reserved; multi-player renders an
+            // explicit ‹ label (i/n) › with bright chevrons, single stays
+            // a dim label with no chevron (click cycles).
+            Item {
+              width: parent.width
+              height: 18
+
+              Text {
+                anchors.left: parent.left
+                anchors.verticalCenter: parent.verticalCenter
+                text: IslandState.playerCount > 1
+                  ? "‹  " + IslandState.playerLabel + "  (" + IslandState.playerPos + "/" + IslandState.playerCount + ")  ›"
+                  : IslandState.playerLabel
+                color: IslandState.playerCount > 1 ? IslandTheme.text : IslandTheme.textSecondary
+                font.family: IslandTheme.fontFamily
+                font.pixelSize: IslandTheme.secondarySize
+                font.weight: Font.DemiBold
+                elide: Text.ElideRight
+                width: parent.width
+                maximumLineCount: 1
+              }
+
+              MouseArea {
+                anchors.fill: parent
+                cursorShape: IslandState.playerCount > 1 ? Qt.PointingHandCursor : Qt.ArrowCursor
+                onClicked: {
+                  if (IslandState.playerCount > 1)
+                    IslandState.cyclePlayer();
+                }
+              }
+            }
+
+            // Marquee if long: scrolls only while playing + shown.
+            Item {
+              width: parent.width
+              height: 22
+              clip: true
+
+              Text {
+                id: titleText
+                text: IslandState.title !== "" ? IslandState.title : "Nothing playing"
+                color: IslandTheme.text
+                font.family: IslandTheme.fontFamily
+                font.pixelSize: IslandTheme.bigSize
+                font.weight: Font.DemiBold
+
+                NumberAnimation on x {
+                  id: marq
+                  from: 0
+                  to: -(titleText.implicitWidth - 280)
+                  duration: Math.max(1200, titleText.implicitWidth * 28)
+                  loops: Animation.Infinite
+                  running: titleText.implicitWidth > 280 && IslandState.isPlaying
+                    && island.face === "media" && !island.rm
+                  onRunningChanged: {
+                    if (!running)
+                      titleText.x = 0;
+                  }
+                }
+              }
+            }
+
+            Text {
+              width: parent.width
+              text: IslandState.artist
+              color: IslandTheme.textSecondary
+              font.family: IslandTheme.fontFamily
+              font.pixelSize: IslandTheme.secondarySize
+              elide: Text.ElideRight
+              maximumLineCount: 1
+              visible: text !== ""
+            }
+
+            // Seekbar only when the player really seeks.
+            Row {
+              width: parent.width
+              spacing: 8
+              visible: IslandState.canSeek && IslandState.positionSupported && IslandState.length > 0
+
+              Text {
+                anchors.verticalCenter: parent.verticalCenter
+                text: IslandState.fmtDur(IslandState.shownPos)
+                color: IslandTheme.textSecondary
+                font.family: IslandTheme.fontFamily
+                font.pixelSize: 11
+              }
+
+              C.BarSlider {
+                width: parent.width - 76
+                anchors.verticalCenter: parent.verticalCenter
+                value: IslandState.length > 0 ? IslandState.shownPos / IslandState.length : 0
+                onMoved: (v) => IslandState.seekTo(v * IslandState.length)
+              }
+
+              Text {
+                anchors.verticalCenter: parent.verticalCenter
+                text: "-" + IslandState.fmtDur(IslandState.length - IslandState.shownPos)
+                color: IslandTheme.textSecondary
+                font.family: IslandTheme.fontFamily
+                font.pixelSize: 11
+              }
+            }
+
+            // Transport: 28px buttons (icon font exception — Inter
+            // has no codepoints for these; all prose stays Inter).
+            Row {
+              height: 32
+              spacing: 18
+              anchors.horizontalCenter: parent.horizontalCenter
+
+              Text {
+                anchors.verticalCenter: parent.verticalCenter
+                text: Icons.prev
+                color: IslandState.canGoPrevious ? IslandTheme.text : IslandTheme.surfaceHigh
+                font.family: Theme.fontFamily
+                font.pixelSize: 28
+
+                MouseArea {
+                  anchors.fill: parent
+                  anchors.margins: -6
+                  cursorShape: Qt.PointingHandCursor
+                  onClicked: IslandState.previous()
+                }
+              }
+
+              Text {
+                anchors.verticalCenter: parent.verticalCenter
+                text: IslandState.isPlaying ? Icons.pause : Icons.play
+                color: IslandTheme.text
+                font.family: Theme.fontFamily
+                font.pixelSize: 28
+
+                MouseArea {
+                  anchors.fill: parent
+                  anchors.margins: -6
+                  cursorShape: Qt.PointingHandCursor
+                  onClicked: IslandState.togglePlaying()
+                }
+              }
+
+              Text {
+                anchors.verticalCenter: parent.verticalCenter
+                text: Icons.next
+                color: IslandState.canGoNext ? IslandTheme.text : IslandTheme.surfaceHigh
+                font.family: Theme.fontFamily
+                font.pixelSize: 28
+
+                MouseArea {
+                  anchors.fill: parent
+                  anchors.margins: -6
+                  cursorShape: Qt.PointingHandCursor
+                  onClicked: IslandState.next()
+                }
+              }
+            }
+          }
+        }
+      }
+
+      // ---- hub: header + toggles + sliders ------------------------
+      Face {
+        width: island.baseW
+        height: island.baseH
+        anchors.centerIn: parent
+        shown: island.face === "hub"
 
         Column {
-          width: 280
-          anchors.verticalCenter: parent.verticalCenter
-          spacing: 4
+          anchors.fill: parent
+          anchors.margins: 14
+          spacing: 5
+          visible: IslandState.hubView === ""
 
-          // Player switcher: always reserved; multi-player renders an
-          // explicit ‹ label (i/n) › with bright chevrons, single stays
-          // a dim label with no chevron (click cycles).
+          // Header: date over big time left, green battery card right.
+          Item {
+            width: parent.width
+            height: 52
+
+            Column {
+              anchors.left: parent.left
+              anchors.verticalCenter: parent.verticalCenter
+              spacing: 2
+
+              Text {
+                text: IslandState.fullDate
+                color: IslandTheme.textSecondary
+                font.family: IslandTheme.fontFamily
+                font.pixelSize: 12
+              }
+
+              Text {
+                text: IslandState.timeText
+                color: IslandTheme.text
+                font.family: IslandTheme.fontFamily
+                font.pixelSize: 22
+                font.weight: Font.DemiBold
+              }
+            }
+
+            Rectangle {
+              width: 150
+              height: 52
+              radius: 14
+              anchors.right: parent.right
+              anchors.verticalCenter: parent.verticalCenter
+              color: IslandTheme.surfaceHigh
+              border.color: IslandState.charging ? IslandTheme.green : Qt.rgba(1, 1, 1, 0.12)
+              border.width: 1
+              visible: IslandState.battAvailable
+
+              Rectangle {
+                anchors.fill: parent
+                radius: parent.radius
+                color: IslandTheme.green
+                opacity: IslandState.charging ? 0.18 : 0.08
+              }
+
+              Column {
+                anchors.left: parent.left
+                anchors.leftMargin: 12
+                anchors.verticalCenter: parent.verticalCenter
+                spacing: 1
+
+                Text {
+                  text: IslandState.percent + "%"
+                  color: IslandTheme.text
+                  font.family: IslandTheme.fontFamily
+                  font.pixelSize: 17
+                  font.weight: Font.DemiBold
+                }
+
+                Text {
+                  width: 126
+                  text: IslandState.battTimeText
+                  color: IslandTheme.textSecondary
+                  font.family: IslandTheme.fontFamily
+                  font.pixelSize: 11
+                  elide: Text.ElideRight
+                  maximumLineCount: 1
+                }
+              }
+            }
+          }
+
+          Row {
+            width: parent.width
+            height: 62
+            spacing: 8
+
+            HubCard {
+              width: (parent.width - 24) / 4
+              height: parent.height
+              icon: Icons.wifi
+              caption: "Wi-Fi"
+              sub: !IslandState.wifiEnabled ? "Off" : (IslandState.ssid !== "" ? IslandState.ssid : "On")
+              isOn: IslandState.wifiEnabled
+              tint: IslandTheme.accent
+              expandable: true
+              onActivated: IslandState.toggleWifi()
+              onExpanded: IslandState.setHubView("wifi")
+            }
+
+            HubCard {
+              width: (parent.width - 24) / 4
+              height: parent.height
+              icon: Icons.bluetooth
+              caption: "Bluetooth"
+              sub: !IslandState.btEnabled ? "Off" : (IslandState.btDevice !== "" ? IslandState.btDevice : "On")
+              isOn: IslandState.btEnabled
+              tint: IslandTheme.accent
+              expandable: true
+              onActivated: IslandState.toggleBluetooth()
+              onExpanded: IslandState.setHubView("bluetooth")
+            }
+
+            HubCard {
+              width: (parent.width - 24) / 4
+              height: parent.height
+              icon: Icons.moon
+              caption: "Night"
+              sub: Sys.nightLight ? "On" : "Off"
+              isOn: Sys.nightLight
+              tint: IslandTheme.orange
+              onActivated: Theme.toggleNightLight()
+            }
+
+            HubCard {
+              width: (parent.width - 24) / 4
+              height: parent.height
+              icon: IslandState.dnd ? Icons.bellSlash : Icons.bell
+              caption: "Focus"
+              sub: IslandState.dnd ? "On" : "Off"
+              isOn: IslandState.dnd
+              tint: IslandTheme.red
+              onActivated: IslandState.toggleDnd()
+            }
+          }
+
+          Item {
+            width: parent.width
+            height: 30
+
+            Text {
+              id: volLabel
+              anchors.left: parent.left
+              anchors.baseline: volValue.baseline
+              text: "Volume"
+              color: IslandTheme.textSecondary
+              font.family: IslandTheme.fontFamily
+              font.pixelSize: 11
+            }
+
+            Text {
+              id: volValue
+              anchors.top: parent.top
+              anchors.right: parent.right
+              text: IslandState.muted ? "Muted" : Math.round(IslandState.volume * 100) + "%"
+              color: IslandTheme.text
+              font.family: IslandTheme.fontFamily
+              font.pixelSize: 11
+              font.weight: Font.DemiBold
+
+              MouseArea {
+                anchors.fill: parent
+                anchors.margins: -4
+                cursorShape: Qt.PointingHandCursor
+                onClicked: IslandState.toggleMute()
+              }
+            }
+
+            C.BarSlider {
+              anchors.left: parent.left
+              anchors.right: parent.right
+              anchors.bottom: parent.bottom
+              value: IslandState.muted ? 0 : IslandState.volume
+              onMoved: (v) => IslandState.setVolume(v)
+            }
+          }
+
+          Item {
+            width: parent.width
+            height: 30
+
+            Text {
+              anchors.left: parent.left
+              anchors.baseline: brightValue.baseline
+              text: "Brightness"
+              color: IslandTheme.textSecondary
+              font.family: IslandTheme.fontFamily
+              font.pixelSize: 11
+            }
+
+            Text {
+              id: brightValue
+              anchors.top: parent.top
+              anchors.right: parent.right
+              text: Math.round(IslandState.level * 100) + "%"
+              color: IslandTheme.text
+              font.family: IslandTheme.fontFamily
+              font.pixelSize: 11
+              font.weight: Font.DemiBold
+            }
+
+            C.BarSlider {
+              anchors.left: parent.left
+              anchors.right: parent.right
+              anchors.bottom: parent.bottom
+              value: IslandState.level
+              onMoved: (v) => IslandState.setLevel(v)
+            }
+          }
+
+          // Stat rings: CPU / RAM / Temp / Disk (Sys pollers already run;
+          // disk + GHz + fan are one-shots refreshed on hub open).
+          Row {
+            width: parent.width
+            height: 92
+            spacing: 8
+
+            RingCard {
+              width: (parent.width - 24) / 4
+              height: parent.height
+              title: "CPU"
+              center: String(IslandState.cpuPct)
+              frac: IslandState.cpuPct / 100
+              sub: IslandState.cpuGhz
+              ringColor: IslandTheme.accent
+            }
+
+            RingCard {
+              width: (parent.width - 24) / 4
+              height: parent.height
+              title: "RAM"
+              center: String(IslandState.memPct)
+              frac: IslandState.memPct / 100
+              sub: IslandState.memStr
+              ringColor: IslandTheme.green
+            }
+
+            RingCard {
+              width: (parent.width - 24) / 4
+              height: parent.height
+              title: "Temp"
+              center: IslandState.tempC + "°"
+              frac: IslandState.tempC / 100
+              sub: IslandState.fanStr
+              ringColor: IslandTheme.orange
+            }
+
+            RingCard {
+              width: (parent.width - 24) / 4
+              height: parent.height
+              title: "Disk"
+              center: String(IslandState.diskPct)
+              frac: IslandState.diskPct / 100
+              sub: IslandState.diskStr
+              ringColor: IslandTheme.yellow
+            }
+          }
+
+
+          // Quick actions: Night / Lock / Sleep / Power.
+          Row {
+            width: parent.width
+            height: 62
+            spacing: 8
+
+            component HubAction: Column {
+              id: actionRoot
+              required property string icon
+              required property string caption
+              required property bool red
+              signal fired()
+              spacing: 2
+              width: parent ? (parent.width - 24) / 4 : 49
+
+              Rectangle {
+                width: 46
+                height: 46
+                radius: 12
+                anchors.horizontalCenter: parent.horizontalCenter
+                color: IslandTheme.surfaceHigh
+                border.color: Qt.rgba(1, 1, 1, 0.12)
+                border.width: 1
+
+                Text {
+                  anchors.centerIn: parent
+                  text: actionRoot.icon
+                  color: actionRoot.red ? IslandTheme.red : IslandTheme.text
+                  font.family: actionRoot.red ? IslandTheme.fontFamily : Theme.fontFamily
+                  font.pixelSize: actionRoot.red ? 16 : 20
+                  font.weight: actionRoot.red ? Font.DemiBold : Font.Normal
+                }
+
+                MouseArea {
+                  anchors.fill: parent
+                  cursorShape: Qt.PointingHandCursor
+                  onClicked: actionRoot.fired()
+                }
+              }
+
+              Text {
+                anchors.horizontalCenter: parent.horizontalCenter
+                text: actionRoot.caption
+                color: IslandTheme.textSecondary
+                font.family: IslandTheme.fontFamily
+                font.pixelSize: 10
+              }
+            }
+
+
+
+
+            HubAction {
+              icon: Icons.moon
+              caption: "Night"
+              red: false
+              onFired: IslandState.toggleNight()
+            }
+
+            HubAction {
+              icon: Icons.lock
+              caption: "Lock"
+              red: false
+              onFired: IslandState.lockScreen()
+            }
+
+            HubAction {
+              icon: Icons.snowflake
+              caption: "Sleep"
+              red: false
+              onFired: IslandState.suspendNow()
+            }
+
+            HubAction {
+              icon: Icons.power
+              caption: "Power"
+              red: false
+              onFired: IslandState.openSession()
+            }
+          }
+
+          // Footer: uptime + net rates left, keyboard layout right.
           Item {
             width: parent.width
             height: 18
@@ -830,645 +1352,151 @@ Item {
             Text {
               anchors.left: parent.left
               anchors.verticalCenter: parent.verticalCenter
-              text: IslandState.playerCount > 1
-                ? "‹  " + IslandState.playerLabel + "  (" + IslandState.playerPos + "/" + IslandState.playerCount + ")  ›"
-                : IslandState.playerLabel
-              color: IslandState.playerCount > 1 ? IslandTheme.text : IslandTheme.textSecondary
+              text: IslandState.uptimeStr + "  ·  " + IslandState.netStr
+              color: IslandTheme.textSecondary
               font.family: IslandTheme.fontFamily
-              font.pixelSize: IslandTheme.secondarySize
-              font.weight: Font.DemiBold
-              elide: Text.ElideRight
-              width: parent.width
-              maximumLineCount: 1
+              font.pixelSize: 11
             }
 
-            MouseArea {
-              anchors.fill: parent
-              cursorShape: IslandState.playerCount > 1 ? Qt.PointingHandCursor : Qt.ArrowCursor
-              onClicked: {
-                if (IslandState.playerCount > 1)
-                  IslandState.cyclePlayer();
-              }
+            Text {
+              anchors.right: parent.right
+              anchors.verticalCenter: parent.verticalCenter
+              text: IslandState.kbLayout
+              color: IslandTheme.textSecondary
+              font.family: IslandTheme.fontFamily
+              font.pixelSize: 11
+              font.weight: Font.DemiBold
+              visible: IslandState.kbLayout !== ""
             }
           }
+        }
 
-          // Marquee if long: scrolls only while playing + shown.
+        // Wi-Fi / Bluetooth full lists: replace the merged view, back
+        // button inside each panel returns here. No feature loss.
+        Item {
+          anchors.fill: parent
+          visible: island.face === "hub" && IslandState.hubView !== ""
+
+          C.WifiPanel {
+            anchors.fill: parent
+            anchors.margins: 12
+            visible: IslandState.hubView === "wifi"
+            onRequestBack: IslandState.setHubView("")
+          }
+
+          C.BluetoothPanel {
+            anchors.fill: parent
+            anchors.margins: 12
+            visible: IslandState.hubView === "bluetooth"
+            onRequestBack: IslandState.setHubView("")
+          }
+        }
+      }
+
+      // ---- legacy panes: existing bodies, settled sizes ---------
+      Face {
+        width: island.baseW
+        height: island.baseH
+        anchors.centerIn: parent
+        shown: island.face === "legacy"
+
+        Column {
+          anchors.fill: parent
+
           Item {
             width: parent.width
-            height: 22
-            clip: true
+            height: IslandTheme.legacyHeaderH
 
             Text {
-              id: titleText
-              text: IslandState.title !== "" ? IslandState.title : "Nothing playing"
+              anchors.left: parent.left
+              anchors.leftMargin: 16
+              anchors.verticalCenter: parent.verticalCenter
+              text: island.legacyTitle()
               color: IslandTheme.text
               font.family: IslandTheme.fontFamily
-              font.pixelSize: IslandTheme.bigSize
+              font.pixelSize: IslandTheme.titleSize
               font.weight: Font.DemiBold
+            }
 
-              NumberAnimation on x {
-                id: marq
-                from: 0
-                to: -(titleText.implicitWidth - 280)
-                duration: Math.max(1200, titleText.implicitWidth * 28)
-                loops: Animation.Infinite
-                running: titleText.implicitWidth > 280 && IslandState.isPlaying
-                  && island.face === "media" && !island.rm
-                onRunningChanged: {
-                  if (!running)
-                    titleText.x = 0;
-                }
+            Text {
+              anchors.right: parent.right
+              anchors.rightMargin: 16
+              anchors.verticalCenter: parent.verticalCenter
+              text: "Esc to close"
+              color: IslandTheme.textSecondary
+              font.family: IslandTheme.fontFamily
+              font.pixelSize: 11
+
+              MouseArea {
+                anchors.fill: parent
+                anchors.margins: -6
+                cursorShape: Qt.PointingHandCursor
+                onClicked: IslandState.collapse()
               }
             }
           }
 
-          Text {
-            width: parent.width
-            text: IslandState.artist
-            color: IslandTheme.textSecondary
-            font.family: IslandTheme.fontFamily
-            font.pixelSize: IslandTheme.secondarySize
-            elide: Text.ElideRight
-            maximumLineCount: 1
-            visible: text !== ""
-          }
-
-          // Seekbar only when the player really seeks.
-          Row {
-            width: parent.width
-            spacing: 8
-            visible: IslandState.canSeek && IslandState.positionSupported && IslandState.length > 0
-
-            Text {
-              anchors.verticalCenter: parent.verticalCenter
-              text: IslandState.fmtDur(IslandState.shownPos)
-              color: IslandTheme.textSecondary
-              font.family: IslandTheme.fontFamily
-              font.pixelSize: 11
-            }
-
-            C.BarSlider {
-              width: parent.width - 76
-              anchors.verticalCenter: parent.verticalCenter
-              value: IslandState.length > 0 ? IslandState.shownPos / IslandState.length : 0
-              onMoved: (v) => IslandState.seekTo(v * IslandState.length)
-            }
-
-            Text {
-              anchors.verticalCenter: parent.verticalCenter
-              text: "-" + IslandState.fmtDur(IslandState.length - IslandState.shownPos)
-              color: IslandTheme.textSecondary
-              font.family: IslandTheme.fontFamily
-              font.pixelSize: 11
-            }
-          }
-
-          // Transport: 28px buttons (icon font exception — Inter
-          // has no codepoints for these; all prose stays Inter).
-          Row {
-            height: 32
-            spacing: 18
+          Item {
+            width: island.legacyContentW()
+            height: island.legacyContentH()
             anchors.horizontalCenter: parent.horizontalCenter
 
-            Text {
-              anchors.verticalCenter: parent.verticalCenter
-              text: Icons.prev
-              color: IslandState.canGoPrevious ? IslandTheme.text : IslandTheme.surfaceHigh
-              font.family: Theme.fontFamily
-              font.pixelSize: 28
-
-              MouseArea {
-                anchors.fill: parent
-                anchors.margins: -6
-                cursorShape: Qt.PointingHandCursor
-                onClicked: IslandState.previous()
-              }
-            }
-
-            Text {
-              anchors.verticalCenter: parent.verticalCenter
-              text: IslandState.isPlaying ? Icons.pause : Icons.play
-              color: IslandTheme.text
-              font.family: Theme.fontFamily
-              font.pixelSize: 28
-
-              MouseArea {
-                anchors.fill: parent
-                anchors.margins: -6
-                cursorShape: Qt.PointingHandCursor
-                onClicked: IslandState.togglePlaying()
-              }
-            }
-
-            Text {
-              anchors.verticalCenter: parent.verticalCenter
-              text: Icons.next
-              color: IslandState.canGoNext ? IslandTheme.text : IslandTheme.surfaceHigh
-              font.family: Theme.fontFamily
-              font.pixelSize: 28
-
-              MouseArea {
-                anchors.fill: parent
-                anchors.margins: -6
-                cursorShape: Qt.PointingHandCursor
-                onClicked: IslandState.next()
-              }
-            }
-          }
-        }
-      }
-    }
-
-    // ---- hub: header + toggles + sliders ------------------------
-    Face {
-      anchors.fill: parent
-      shown: island.face === "hub"
-
-      Column {
-        anchors.fill: parent
-        anchors.margins: 14
-        spacing: 5
-        visible: IslandState.hubView === ""
-
-        // Header: date over big time left, green battery card right.
-        Item {
-          width: parent.width
-          height: 52
-
-          Column {
-            anchors.left: parent.left
-            anchors.verticalCenter: parent.verticalCenter
-            spacing: 2
-
-            Text {
-              text: IslandState.fullDate
-              color: IslandTheme.textSecondary
-              font.family: IslandTheme.fontFamily
-              font.pixelSize: 12
-            }
-
-            Text {
-              text: IslandState.timeText
-              color: IslandTheme.text
-              font.family: IslandTheme.fontFamily
-              font.pixelSize: 22
-              font.weight: Font.DemiBold
-            }
-          }
-
-          Rectangle {
-            width: 150
-            height: 52
-            radius: 14
-            anchors.right: parent.right
-            anchors.verticalCenter: parent.verticalCenter
-            color: IslandTheme.surfaceHigh
-            border.color: IslandState.charging ? IslandTheme.green : Qt.rgba(1, 1, 1, 0.12)
-            border.width: 1
-            visible: IslandState.battAvailable
-
-            Rectangle {
+            C.ControlsBody {
+              id: controlsBody
               anchors.fill: parent
-              radius: parent.radius
-              color: IslandTheme.green
-              opacity: IslandState.charging ? 0.18 : 0.08
+              anchors.margins: IslandTheme.legacyMargin
+              battGlyph: IslandState.battGlyph
+              battPct: IslandState.percent
+              visible: island.legacyMode === "controls"
             }
 
-            Column {
-              anchors.left: parent.left
-              anchors.leftMargin: 12
-              anchors.verticalCenter: parent.verticalCenter
-              spacing: 1
+            C.LauncherBody {
+              anchors.fill: parent
+              anchors.margins: IslandTheme.legacyMargin
+              active: island.face === "legacy" && island.legacyMode === "launcher"
+              visible: island.legacyMode === "launcher"
+            }
 
-              Text {
-                text: IslandState.percent + "%"
-                color: IslandTheme.text
-                font.family: IslandTheme.fontFamily
-                font.pixelSize: 17
-                font.weight: Font.DemiBold
+            C.WallpaperBody {
+              anchors.fill: parent
+              anchors.margins: IslandTheme.legacyMargin
+              active: island.face === "legacy" && island.legacyMode === "picker"
+              visible: island.legacyMode === "picker"
+            }
+
+            C.SessionBody {
+              anchors.fill: parent
+              anchors.margins: IslandTheme.legacyMargin
+              active: island.face === "legacy" && island.legacyMode === "session"
+              visible: island.legacyMode === "session"
+            }
+
+            C.CheatsheetBody {
+              anchors.fill: parent
+              anchors.margins: IslandTheme.legacyMargin
+              visible: island.legacyMode === "keys"
+            }
+
+            Item {
+              anchors.fill: parent
+              visible: island.legacyMode === "calendar"
+
+              C.Calendar {
+                id: islandCal
+                anchors.top: parent.top
+                anchors.horizontalCenter: parent.horizontalCenter
+                onPicked: IslandState.collapse()
               }
 
               Text {
-                width: 126
-                text: IslandState.battTimeText
+                anchors.top: islandCal.bottom
+                anchors.topMargin: 8
+                anchors.horizontalCenter: parent.horizontalCenter
+                text: "Esc close"
                 color: IslandTheme.textSecondary
                 font.family: IslandTheme.fontFamily
-                font.pixelSize: 11
-                elide: Text.ElideRight
-                maximumLineCount: 1
+                font.pixelSize: 10
               }
-            }
-          }
-        }
-
-        Row {
-          width: parent.width
-          height: 62
-          spacing: 8
-
-          HubCard {
-            width: (parent.width - 24) / 4
-            height: parent.height
-            icon: Icons.wifi
-            caption: "Wi-Fi"
-            sub: !IslandState.wifiEnabled ? "Off" : (IslandState.ssid !== "" ? IslandState.ssid : "On")
-            isOn: IslandState.wifiEnabled
-            tint: IslandTheme.accent
-            expandable: true
-            onActivated: IslandState.toggleWifi()
-            onExpanded: IslandState.setHubView("wifi")
-          }
-
-          HubCard {
-            width: (parent.width - 24) / 4
-            height: parent.height
-            icon: Icons.bluetooth
-            caption: "Bluetooth"
-            sub: !IslandState.btEnabled ? "Off" : (IslandState.btDevice !== "" ? IslandState.btDevice : "On")
-            isOn: IslandState.btEnabled
-            tint: IslandTheme.accent
-            expandable: true
-            onActivated: IslandState.toggleBluetooth()
-            onExpanded: IslandState.setHubView("bluetooth")
-          }
-
-          HubCard {
-            width: (parent.width - 24) / 4
-            height: parent.height
-            icon: Icons.moon
-            caption: "Night"
-            sub: Sys.nightLight ? "On" : "Off"
-            isOn: Sys.nightLight
-            tint: IslandTheme.orange
-            onActivated: Theme.toggleNightLight()
-          }
-
-          HubCard {
-            width: (parent.width - 24) / 4
-            height: parent.height
-            icon: IslandState.dnd ? Icons.bellSlash : Icons.bell
-            caption: "Focus"
-            sub: IslandState.dnd ? "On" : "Off"
-            isOn: IslandState.dnd
-            tint: IslandTheme.red
-            onActivated: IslandState.toggleDnd()
-          }
-        }
-
-        Item {
-          width: parent.width
-          height: 30
-
-          Text {
-            id: volLabel
-            anchors.left: parent.left
-            anchors.baseline: volValue.baseline
-            text: "Volume"
-            color: IslandTheme.textSecondary
-            font.family: IslandTheme.fontFamily
-            font.pixelSize: 11
-          }
-
-          Text {
-            id: volValue
-            anchors.top: parent.top
-            anchors.right: parent.right
-            text: IslandState.muted ? "Muted" : Math.round(IslandState.volume * 100) + "%"
-            color: IslandTheme.text
-            font.family: IslandTheme.fontFamily
-            font.pixelSize: 11
-            font.weight: Font.DemiBold
-
-            MouseArea {
-              anchors.fill: parent
-              anchors.margins: -4
-              cursorShape: Qt.PointingHandCursor
-              onClicked: IslandState.toggleMute()
-            }
-          }
-
-          C.BarSlider {
-            anchors.left: parent.left
-            anchors.right: parent.right
-            anchors.bottom: parent.bottom
-            value: IslandState.muted ? 0 : IslandState.volume
-            onMoved: (v) => IslandState.setVolume(v)
-          }
-        }
-
-        Item {
-          width: parent.width
-          height: 30
-
-          Text {
-            anchors.left: parent.left
-            anchors.baseline: brightValue.baseline
-            text: "Brightness"
-            color: IslandTheme.textSecondary
-            font.family: IslandTheme.fontFamily
-            font.pixelSize: 11
-          }
-
-          Text {
-            id: brightValue
-            anchors.top: parent.top
-            anchors.right: parent.right
-            text: Math.round(IslandState.level * 100) + "%"
-            color: IslandTheme.text
-            font.family: IslandTheme.fontFamily
-            font.pixelSize: 11
-            font.weight: Font.DemiBold
-          }
-
-          C.BarSlider {
-            anchors.left: parent.left
-            anchors.right: parent.right
-            anchors.bottom: parent.bottom
-            value: IslandState.level
-            onMoved: (v) => IslandState.setLevel(v)
-          }
-        }
-
-        // Stat rings: CPU / RAM / Temp / Disk (Sys pollers already run;
-        // disk + GHz + fan are one-shots refreshed on hub open).
-        Row {
-          width: parent.width
-          height: 92
-          spacing: 8
-
-          RingCard {
-            width: (parent.width - 24) / 4
-            height: parent.height
-            title: "CPU"
-            center: String(IslandState.cpuPct)
-            frac: IslandState.cpuPct / 100
-            sub: IslandState.cpuGhz
-            ringColor: IslandTheme.accent
-          }
-
-          RingCard {
-            width: (parent.width - 24) / 4
-            height: parent.height
-            title: "RAM"
-            center: String(IslandState.memPct)
-            frac: IslandState.memPct / 100
-            sub: IslandState.memStr
-            ringColor: IslandTheme.green
-          }
-
-          RingCard {
-            width: (parent.width - 24) / 4
-            height: parent.height
-            title: "Temp"
-            center: IslandState.tempC + "°"
-            frac: IslandState.tempC / 100
-            sub: IslandState.fanStr
-            ringColor: IslandTheme.orange
-          }
-
-          RingCard {
-            width: (parent.width - 24) / 4
-            height: parent.height
-            title: "Disk"
-            center: String(IslandState.diskPct)
-            frac: IslandState.diskPct / 100
-            sub: IslandState.diskStr
-            ringColor: IslandTheme.yellow
-          }
-        }
-
-
-        // Quick actions: Night / Lock / Sleep / Power.
-        Row {
-          width: parent.width
-          height: 62
-          spacing: 8
-
-          component HubAction: Column {
-            id: actionRoot
-            required property string icon
-            required property string caption
-            required property bool red
-            signal fired()
-            spacing: 2
-            width: parent ? (parent.width - 24) / 4 : 49
-
-            Rectangle {
-              width: 46
-              height: 46
-              radius: 12
-              anchors.horizontalCenter: parent.horizontalCenter
-              color: IslandTheme.surfaceHigh
-              border.color: Qt.rgba(1, 1, 1, 0.12)
-              border.width: 1
-
-              Text {
-                anchors.centerIn: parent
-                text: actionRoot.icon
-                color: actionRoot.red ? IslandTheme.red : IslandTheme.text
-                font.family: actionRoot.red ? IslandTheme.fontFamily : Theme.fontFamily
-                font.pixelSize: actionRoot.red ? 16 : 20
-                font.weight: actionRoot.red ? Font.DemiBold : Font.Normal
-              }
-
-              MouseArea {
-                anchors.fill: parent
-                cursorShape: Qt.PointingHandCursor
-                onClicked: actionRoot.fired()
-              }
-            }
-
-            Text {
-              anchors.horizontalCenter: parent.horizontalCenter
-              text: actionRoot.caption
-              color: IslandTheme.textSecondary
-              font.family: IslandTheme.fontFamily
-              font.pixelSize: 10
-            }
-          }
-
-
-
-
-          HubAction {
-            icon: Icons.moon
-            caption: "Night"
-            red: false
-            onFired: IslandState.toggleNight()
-          }
-
-          HubAction {
-            icon: Icons.lock
-            caption: "Lock"
-            red: false
-            onFired: IslandState.lockScreen()
-          }
-
-          HubAction {
-            icon: Icons.snowflake
-            caption: "Sleep"
-            red: false
-            onFired: IslandState.suspendNow()
-          }
-
-          HubAction {
-            icon: Icons.power
-            caption: "Power"
-            red: false
-            onFired: IslandState.openSession()
-          }
-        }
-
-        // Footer: uptime + net rates left, keyboard layout right.
-        Item {
-          width: parent.width
-          height: 18
-
-          Text {
-            anchors.left: parent.left
-            anchors.verticalCenter: parent.verticalCenter
-            text: IslandState.uptimeStr + "  ·  " + IslandState.netStr
-            color: IslandTheme.textSecondary
-            font.family: IslandTheme.fontFamily
-            font.pixelSize: 11
-          }
-
-          Text {
-            anchors.right: parent.right
-            anchors.verticalCenter: parent.verticalCenter
-            text: IslandState.kbLayout
-            color: IslandTheme.textSecondary
-            font.family: IslandTheme.fontFamily
-            font.pixelSize: 11
-            font.weight: Font.DemiBold
-            visible: IslandState.kbLayout !== ""
-          }
-        }
-      }
-
-      // Wi-Fi / Bluetooth full lists: replace the merged view, back
-      // button inside each panel returns here. No feature loss.
-      Item {
-        anchors.fill: parent
-        visible: island.face === "hub" && IslandState.hubView !== ""
-
-        C.WifiPanel {
-          anchors.fill: parent
-          anchors.margins: 12
-          visible: IslandState.hubView === "wifi"
-          onRequestBack: IslandState.setHubView("")
-        }
-
-        C.BluetoothPanel {
-          anchors.fill: parent
-          anchors.margins: 12
-          visible: IslandState.hubView === "bluetooth"
-          onRequestBack: IslandState.setHubView("")
-        }
-      }
-    }
-
-    // ---- legacy panes: existing bodies, settled sizes ---------
-    Face {
-      anchors.fill: parent
-      shown: island.face === "legacy"
-
-      Column {
-        anchors.fill: parent
-
-        Item {
-          width: parent.width
-          height: IslandTheme.legacyHeaderH
-
-          Text {
-            anchors.left: parent.left
-            anchors.leftMargin: 16
-            anchors.verticalCenter: parent.verticalCenter
-            text: island.legacyTitle()
-            color: IslandTheme.text
-            font.family: IslandTheme.fontFamily
-            font.pixelSize: IslandTheme.titleSize
-            font.weight: Font.DemiBold
-          }
-
-          Text {
-            anchors.right: parent.right
-            anchors.rightMargin: 16
-            anchors.verticalCenter: parent.verticalCenter
-            text: "Esc to close"
-            color: IslandTheme.textSecondary
-            font.family: IslandTheme.fontFamily
-            font.pixelSize: 11
-
-            MouseArea {
-              anchors.fill: parent
-              anchors.margins: -6
-              cursorShape: Qt.PointingHandCursor
-              onClicked: IslandState.collapse()
-            }
-          }
-        }
-
-        Item {
-          width: island.legacyContentW()
-          height: island.legacyContentH()
-          anchors.horizontalCenter: parent.horizontalCenter
-
-          C.ControlsBody {
-            id: controlsBody
-            anchors.fill: parent
-            anchors.margins: IslandTheme.legacyMargin
-            battGlyph: IslandState.battGlyph
-            battPct: IslandState.percent
-            visible: island.legacyMode === "controls"
-          }
-
-          C.LauncherBody {
-            anchors.fill: parent
-            anchors.margins: IslandTheme.legacyMargin
-            active: island.face === "legacy" && island.legacyMode === "launcher"
-            visible: island.legacyMode === "launcher"
-          }
-
-          C.WallpaperBody {
-            anchors.fill: parent
-            anchors.margins: IslandTheme.legacyMargin
-            active: island.face === "legacy" && island.legacyMode === "picker"
-            visible: island.legacyMode === "picker"
-          }
-
-          C.SessionBody {
-            anchors.fill: parent
-            anchors.margins: IslandTheme.legacyMargin
-            active: island.face === "legacy" && island.legacyMode === "session"
-            visible: island.legacyMode === "session"
-          }
-
-          C.CheatsheetBody {
-            anchors.fill: parent
-            anchors.margins: IslandTheme.legacyMargin
-            visible: island.legacyMode === "keys"
-          }
-
-          Item {
-            anchors.fill: parent
-            visible: island.legacyMode === "calendar"
-
-            C.Calendar {
-              id: islandCal
-              anchors.top: parent.top
-              anchors.horizontalCenter: parent.horizontalCenter
-              onPicked: IslandState.collapse()
-            }
-
-            Text {
-              anchors.top: islandCal.bottom
-              anchors.topMargin: 8
-              anchors.horizontalCenter: parent.horizontalCenter
-              text: "Esc close"
-              color: IslandTheme.textSecondary
-              font.family: IslandTheme.fontFamily
-              font.pixelSize: 10
             }
           }
         }

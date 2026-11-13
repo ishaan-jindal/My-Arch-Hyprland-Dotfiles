@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick.Effects
 import Quickshell
 import Quickshell.Wayland
 import Quickshell.Services.Notifications
@@ -98,18 +99,19 @@ PanelWindow {
         clip: true
 
         // Phase 2: height collapse driving the sibling move-up glide.
-        // Same soft cubic, 240ms: the gentle attack avoids a multi-pixel
-        // jump on the first frames (the old y1=1 snapped), so the Column
-        // follows the shrinking height frame-by-frame and cards below
-        // glide up. No Column add/move/displaced transitions and no
-        // Behaviors on x/opacity, so appends keep siblings idle and
+        // Same soft cubic, 140ms so it overlaps the tail of the 220ms fade
+        // (~290ms total instead of two serial phases). The gentle attack
+        // avoids a multi-pixel jump on the first frames (the old y1=1
+        // snapped), so the Column follows the shrinking height frame-by-frame
+        // and cards below glide up. No Column add/move/displaced transitions
+        // and no Behaviors on x/opacity, so appends keep siblings idle and
         // entrance never re-fires.
         NumberAnimation {
           id: collapseAnim
           target: wrap
           property: "collapseHeight"
           to: 0
-          duration: 240
+          duration: 140
           easing.type: Easing.BezierSpline
           easing.bezierCurve: [0.33, 0, 0.13, 1]
           onFinished: {
@@ -199,6 +201,20 @@ PanelWindow {
           border.color: wrap.critical ? Theme.critical : Theme.border
           border.width: 1
           radius: Theme.radius
+          // Same single-effect shadow recipe as the island pill (#000000,
+          // blur 0.8, 4px down), at 0.35 so a stack of cards keeps its depth
+          // without going muddy. Always on: this card is the only depth cue
+          // here. The wrapper's overflow clip trims the effect to the card's
+          // own row + 10px pad, so it never bleeds onto a sibling.
+          layer.enabled: true
+          layer.effect: MultiEffect {
+            shadowEnabled: true
+            shadowColor: "#000000"
+            shadowOpacity: 0.35
+            shadowBlur: 0.8
+            shadowHorizontalOffset: 0
+            shadowVerticalOffset: 4
+          }
           // Entrance starts off-screen-right and faded; enterAnim drives
           // to x 0 / opacity 1 once. Siblings are already at rest so they
           // never re-animate when this delegate is created at the bottom.
@@ -231,11 +247,16 @@ PanelWindow {
             }
           }
 
-          // Per-delegate exit: exact reverse of entrance (slide back right
-          // + fade, ~220ms, same soft cubic). Height stays fully open during
-          // the fade so the Column does not relayout mid-animation. The model
-          // row is removed only after the collapse phase below, so siblings
-          // glide up instead of snapping.
+          // Per-delegate exit: slide back right + fade (~220ms, same soft
+          // cubic), with the wrapper collapse overlapped underneath instead
+          // of waiting for the fade to finish. The collapse kicks in at
+          // 150ms (fade ~2/3 done), when the card is already near
+          // transparent, so the whole dismiss reads as one ~290ms motion.
+          // Height only relayouts from that point on, and the wrapper is
+          // clipped, so the fade's sibling move never re-fires x/opacity or
+          // touches sibling Timers / progress bars. The model row is removed
+          // by collapseAnim's finish, so siblings glide up instead of
+          // snapping.
           ParallelAnimation {
             id: exitAnim
             NumberAnimation {
@@ -254,16 +275,19 @@ PanelWindow {
               easing.type: Easing.BezierSpline
               easing.bezierCurve: [0.33, 0, 0.13, 1]
             }
-            onFinished: {
-              // Phase 2: collapse the wrapper (visual + pad) so the Column
-              // relayout itself glides. Card is already faded + slid
-              // (opacity 0, x 48), so shrinking height only moves siblings'
-              // y — x/opacity never re-fire and sibling Timers / progress
-              // bars are untouched. Starts from the integer rest height;
-              // destruction at 0 removes exactly 0px with spacing 0.
-              wrap.collapseHeight = wrap.fullH;
-              wrap.collapsing = true;
-              collapseAnim.start();
+            // Phase 2 trigger, run concurrently with the fade above. Kept
+            // inside exitAnim so stopping the exit also cancels the start.
+            SequentialAnimation {
+              PauseAnimation { duration: 150 }
+              ScriptAction {
+                script: {
+                  // Starts from the integer rest height; destruction at 0
+                  // removes exactly 0px with spacing 0.
+                  wrap.collapseHeight = wrap.fullH;
+                  wrap.collapsing = true;
+                  collapseAnim.start();
+                }
+              }
             }
           }
 

@@ -12,7 +12,7 @@ Rectangle {
   property real cardWidth: 0
   signal activated()
 
-  width: (cardWidth - 32 - 3 * 8) / 4
+  width: (cardWidth - 3 * 8) / 4
   height: 48
   radius: Theme.radius
   color: pillHover.hovered
