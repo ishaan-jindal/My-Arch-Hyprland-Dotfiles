@@ -27,19 +27,20 @@ Rectangle {
     property color mainColor: config.MainColor ? config.MainColor : "#e6e6e6"
     property color mutedColor: config.MutedColor ? config.MutedColor : "#8b8f98"
     property color accentColor: config.AccentColor ? config.AccentColor : "#ffffff"
-    property color accentSoft: config.AccentSoft ? config.AccentSoft : root.accentColor
+    property color accentSoft: config.AccentSoft ? config.AccentSoft : "#8b8f98"
     property color bgColor: config.BackgroundColor ? config.BackgroundColor : "#0a0a0c"
-    property color fieldColor: config.FieldColor ? config.FieldColor : "#14161c"
+    property color fieldColor: config.FieldColor ? config.FieldColor : "#0a0a0c"
+    property color borderColor: config.BorderColor ? config.BorderColor : "#3a3f4b"
     property color criticalColor: config.CriticalColor ? config.CriticalColor : "#ff5f5f"
     property color loginTextColor: config.LoginTextColor ? config.LoginTextColor : "#0a0a0c"
-    property string fontName: config.Font ? config.Font : "JetBrainsMono Nerd Font"
-    property int cornerRadius: config.Radius ? config.Radius : 14
-    property real dimOverlay: config.DimOverlay ? config.DimOverlay : 0.45
-    // Visible dock width, clamped HiDPI-safe; the dock body extends 26px past
-    // the screen edge so the left corners get a 26 radius and the right stays flush.
+    property string fontName: config.Font ? config.Font : "JetBrainsMono Nerd Font Mono"
+    property int cornerRadius: config.Radius ? config.Radius : 10
+    // Visible dock width, clamped HiDPI-safe; the dock body extends dockRadius
+    // past the screen edge so the left corners get a matching radius and the
+    // right stays flush.
     property real dockWidth: Math.min(420, Math.max(300, width - 32))
     property real dockX: width - dockWidth
-    property int dockRadius: 26
+    property int dockRadius: root.cornerRadius
 
     TextConstants {
         id: textConstants
@@ -112,23 +113,24 @@ Rectangle {
         }
     }
 
-    // Soft shadow cast by the dock onto the wallpaper — the only wallpaper
-    // treatment besides the frosted panel itself.
+    // Single clean edge: one narrow soft shadow cast by the dock onto the
+    // wallpaper. The frosted panel itself carries the only hairline.
     Rectangle {
         anchors.top: parent.top
         anchors.bottom: parent.bottom
-        x: root.dockX - 32
-        width: 32
+        x: root.dockX - 28
+        width: 28
         gradient: Gradient {
             orientation: Gradient.Horizontal
             GradientStop { position: 0.0; color: Qt.rgba(0, 0, 0, 0.0) }
-            GradientStop { position: 1.0; color: Qt.rgba(0, 0, 0, 0.3) }
+            GradientStop { position: 0.6; color: Qt.rgba(0, 0, 0, 0.08) }
+            GradientStop { position: 1.0; color: Qt.rgba(0, 0, 0, 0.32) }
         }
     }
 
     // Right frosted-glass dock, full height. Blur is confined to this rect:
     // a live 1:1 ShaderEffectSource crop of the wallpaper region behind the
-    // dock, blurred, tinted, sheened, hairlined. Never full-screen.
+    // dock, blurred, tinted, hairlined. Never full-screen.
     Item {
         id: dock
         x: root.dockX
@@ -156,34 +158,51 @@ Rectangle {
             blurEnabled: true
             blur: 0.55
             blurMax: 64
-            saturation: 1.05
-        }
-
-        Rectangle {
-            anchors.fill: parent
-            color: root.bgColor
-            opacity: 0.6
-            radius: root.dockRadius
-        }
-
-        Rectangle {
-            anchors.fill: parent
-            radius: root.dockRadius
-            gradient: Gradient {
-                orientation: Gradient.Vertical
-                GradientStop { position: 0.0; color: Qt.rgba(1, 1, 1, 0.07) }
-                GradientStop { position: 0.45; color: Qt.rgba(1, 1, 1, 0.0) }
-                GradientStop { position: 1.0; color: Qt.rgba(0, 0, 0, 0.12) }
+            saturation: 1.12
+            // Same rounded shape as the tint/hairline below: without this
+            // the square blur output pokes past the rounded dock corners.
+            // autoPadding off so the mask maps 1:1 onto the dock rect;
+            // layer on the mask makes it a valid texture provider.
+            autoPaddingEnabled: false
+            maskEnabled: true
+            maskSource: Rectangle {
+                width: dockCrop.width
+                height: dockCrop.height
+                radius: root.dockRadius
+                color: "white"
+                layer.enabled: true
+                visible: false
             }
         }
 
         Rectangle {
             anchors.fill: parent
-            color: "transparent"
-            border.color: root.accentColor
-            border.width: 1
-            opacity: 0.3
+            color: root.bgColor
+            opacity: 0.64
             radius: root.dockRadius
+        }
+
+        // The one hairline: outline_variant around the whole dock body.
+        Rectangle {
+            anchors.fill: parent
+            color: "transparent"
+            border.color: root.borderColor
+            border.width: 1
+            opacity: 0.9
+            radius: root.dockRadius
+        }
+
+        // Single inner top-light catch, inset past the corner curve so the
+        // glass reads lit from above instead of sheened all over.
+        Rectangle {
+            anchors.top: parent.top
+            anchors.topMargin: 1
+            anchors.left: parent.left
+            anchors.leftMargin: root.dockRadius
+            anchors.right: parent.right
+            anchors.rightMargin: root.dockRadius * 2
+            height: 1
+            color: Qt.rgba(1, 1, 1, 0.09)
         }
 
         ColumnLayout {
@@ -191,40 +210,34 @@ Rectangle {
             anchors.fill: parent
             anchors.leftMargin: 36
             anchors.rightMargin: 36 + root.dockRadius
-            anchors.topMargin: 28
-            anchors.bottomMargin: 24
-            spacing: 7
-
-            Text {
-                color: root.accentColor
-                font.family: root.fontName
-                font.pointSize: 10
-                font.letterSpacing: 6
-                font.bold: true
-                text: "s a c r e d"
-            }
+            anchors.topMargin: 32
+            anchors.bottomMargin: 20
+            spacing: 8
 
             Text {
                 id: clockText
                 Layout.topMargin: 2
                 color: root.mainColor
+                style: Text.Raised
+                styleColor: Qt.rgba(0, 0, 0, 0.45)
                 font.family: root.fontName
-                font.weight: Font.Thin
-                font.pointSize: 60
-                font.letterSpacing: 2
+                font.weight: Font.Bold
+                font.pointSize: 54
+                font.letterSpacing: 1
             }
 
             Text {
                 id: dateText
                 color: root.mutedColor
                 font.family: root.fontName
+                font.weight: Font.Medium
                 font.pointSize: 12
                 font.letterSpacing: 1
             }
 
             Rectangle {
-                Layout.topMargin: 8
-                Layout.bottomMargin: 8
+                Layout.topMargin: 10
+                Layout.bottomMargin: 10
                 Layout.preferredWidth: 64
                 Layout.preferredHeight: 1
                 color: root.accentColor
@@ -232,14 +245,14 @@ Rectangle {
             }
 
             RowLayout {
-                spacing: 12
+                spacing: 14
 
                 Rectangle {
                     id: avatarBox
-                    Layout.preferredWidth: 48
-                    Layout.preferredHeight: 48
+                    Layout.preferredWidth: 52
+                    Layout.preferredHeight: 52
                     Layout.alignment: Qt.AlignVCenter
-                    radius: 24
+                    radius: 26
                     color: root.accentSoft
 
                     // Single load path: Canvas rasterizes the photo into a
@@ -254,7 +267,7 @@ Rectangle {
                         color: root.loginTextColor
                         font.family: root.fontName
                         font.bold: true
-                        font.pointSize: 18
+                        font.pointSize: 19
                         visible: !avatarBox.avatarPainted
                         text: root.fixedUser.charAt(0).toUpperCase()
                     }
@@ -298,6 +311,8 @@ Rectangle {
                         Layout.fillWidth: true
                         elide: Text.ElideRight
                         color: root.mainColor
+                        style: Text.Raised
+                        styleColor: Qt.rgba(0, 0, 0, 0.45)
                         font.family: root.fontName
                         font.bold: true
                         font.pointSize: 17
@@ -309,8 +324,8 @@ Rectangle {
             Text {
                 id: errorMessage
                 Layout.fillWidth: true
-                Layout.preferredHeight: 22
-                Layout.topMargin: 2
+                Layout.preferredHeight: 20
+                Layout.topMargin: 4
                 verticalAlignment: Text.AlignVCenter
                 wrapMode: Text.WordWrap
                 elide: Text.ElideRight
@@ -320,38 +335,49 @@ Rectangle {
             }
 
             Text {
+                Layout.topMargin: 2
                 color: root.mutedColor
                 font.family: root.fontName
                 font.pointSize: 9
+                font.letterSpacing: 2
                 text: textConstants.password
             }
 
+            // One coherent password control: a single glass field in the
+            // dock's radius language. The PasswordBox itself draws nothing —
+            // fieldBox owns fill, hairline, and focus halo — and the
+            // show/hide toggle is flat text behind a divider inside the
+            // same control, never a second black box.
             Item {
                 Layout.fillWidth: true
-                Layout.preferredHeight: 40
+                Layout.preferredHeight: 46
 
                 Rectangle {
-                    anchors.fill: passRow
+                    anchors.fill: fieldBox
                     anchors.margins: -4
                     radius: root.cornerRadius + 4
                     color: root.accentColor
-                    opacity: passField.activeFocus ? 0.28 : 0
-                    Behavior on opacity { NumberAnimation { duration: 150 } }
+                    opacity: passField.activeFocus ? 0.25 : 0
+                    Behavior on opacity { NumberAnimation { duration: 150; easing.type: Easing.OutCubic } }
                 }
 
-                RowLayout {
-                    id: passRow
+                Rectangle {
+                    id: fieldBox
                     anchors.fill: parent
-                    spacing: 8
+                    radius: root.cornerRadius
+                    color: Qt.rgba(root.fieldColor.r, root.fieldColor.g, root.fieldColor.b, 0.55)
+                    border.color: passField.activeFocus ? root.accentColor : root.borderColor
+                    border.width: passField.activeFocus ? 2 : 1
 
                     PasswordBox {
                         id: passField
-                        Layout.fillWidth: true
-                        Layout.preferredHeight: 40
-                        color: root.fieldColor
-                        borderColor: root.mutedColor
-                        focusColor: root.accentColor
-                        hoverColor: root.accentColor
+                        anchors.fill: parent
+                        anchors.leftMargin: 2
+                        anchors.rightMargin: 66
+                        color: "transparent"
+                        borderColor: "transparent"
+                        focusColor: "transparent"
+                        hoverColor: "transparent"
                         textColor: root.mainColor
                         radius: root.cornerRadius
                         font.family: root.fontName
@@ -365,51 +391,111 @@ Rectangle {
                         }
                     }
 
-                    Button {
-                        Layout.preferredWidth: 60
-                        Layout.preferredHeight: 40
-                        text: passField.echoMode === TextInput.Password ? "show" : "hide"
-                        color: "transparent"
-                        activeColor: root.fieldColor
-                        pressedColor: root.accentColor
-                        textColor: root.mutedColor
+                    Rectangle {
+                        anchors.right: parent.right
+                        anchors.rightMargin: 58
+                        anchors.verticalCenter: parent.verticalCenter
+                        width: 1
+                        height: 20
+                        color: root.borderColor
+                        opacity: 0.7
+                    }
+
+                    Text {
+                        anchors.right: parent.right
+                        anchors.top: parent.top
+                        anchors.bottom: parent.bottom
+                        width: 58
+                        horizontalAlignment: Text.AlignHCenter
+                        verticalAlignment: Text.AlignVCenter
                         font.family: root.fontName
-                        font.pointSize: 9
-                        onClicked: {
-                            passField.echoMode = passField.echoMode === TextInput.Password ? TextInput.Normal : TextInput.Password
+                        font.pointSize: 10
+                        font.letterSpacing: 1
+                        font.bold: true
+                        color: showHover.containsMouse ? root.mainColor : root.mutedColor
+                        text: passField.echoMode === TextInput.Password ? "SHOW" : "HIDE"
+                        Behavior on color { ColorAnimation { duration: 150 } }
+
+                        MouseArea {
+                            id: showHover
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: {
+                                passField.echoMode = passField.echoMode === TextInput.Password ? TextInput.Normal : TextInput.Password
+                            }
                         }
                     }
                 }
             }
 
             Text {
+                Layout.topMargin: 4
                 color: root.mutedColor
                 font.family: root.fontName
                 font.pointSize: 9
+                font.letterSpacing: 2
                 text: textConstants.session
             }
 
-            // Fixed session: status-dot + name microcopy, no picker.
-            RowLayout {
+            // Fixed session, stated plainly: a glass card in the same
+            // language as the password field, so the pinned session reads
+            // as a choice already made rather than a missing picker.
+            Rectangle {
                 Layout.fillWidth: true
-                spacing: 10
+                Layout.preferredHeight: 54
+                radius: root.cornerRadius
+                color: Qt.rgba(root.fieldColor.r, root.fieldColor.g, root.fieldColor.b, 0.45)
+                border.color: root.borderColor
+                border.width: 1
 
-                Rectangle {
-                    Layout.preferredWidth: 6
-                    Layout.preferredHeight: 6
-                    Layout.alignment: Qt.AlignVCenter
-                    radius: 3
-                    color: root.accentColor
-                    opacity: 0.8
-                }
+                RowLayout {
+                    anchors.fill: parent
+                    anchors.leftMargin: 14
+                    anchors.rightMargin: 14
+                    spacing: 12
 
-                Text {
-                    Layout.fillWidth: true
-                    elide: Text.ElideRight
-                    color: root.mainColor
-                    font.family: root.fontName
-                    font.pointSize: 12
-                    text: root.sessionName.charAt(0).toUpperCase() + root.sessionName.slice(1)
+                    Rectangle {
+                        Layout.preferredWidth: 8
+                        Layout.preferredHeight: 8
+                        Layout.alignment: Qt.AlignVCenter
+                        radius: 4
+                        color: root.accentColor
+                    }
+
+                    ColumnLayout {
+                        Layout.fillWidth: true
+                        Layout.alignment: Qt.AlignVCenter
+                        spacing: 1
+
+                        Text {
+                            Layout.fillWidth: true
+                            elide: Text.ElideRight
+                            color: root.mainColor
+                            font.family: root.fontName
+                            font.bold: true
+                            font.pointSize: 13
+                            text: root.sessionName.charAt(0).toUpperCase() + root.sessionName.slice(1)
+                        }
+
+                        Text {
+                            Layout.fillWidth: true
+                            elide: Text.ElideRight
+                            color: root.mutedColor
+                            font.family: root.fontName
+                            font.pointSize: 10
+                            text: qsTr("Wayland · fixed session")
+                        }
+                    }
+
+                    Text {
+                        Layout.alignment: Qt.AlignVCenter
+                        color: root.mutedColor
+                        font.family: root.fontName
+                        font.pointSize: 9
+                        font.letterSpacing: 2
+                        text: qsTr("FIXED")
+                    }
                 }
             }
 
@@ -427,10 +513,11 @@ Rectangle {
             Rectangle {
                 id: loginButton
                 Layout.fillWidth: true
-                Layout.preferredHeight: 46
-                Layout.topMargin: 6
-                radius: 23
-                color: pillMouse.pressed ? root.mutedColor : root.accentColor
+                Layout.preferredHeight: 48
+                Layout.topMargin: 10
+                radius: 24
+                activeFocusOnTab: true
+                color: pillMouse.pressed ? Qt.darker(root.accentColor, 1.18) : ((pillMouse.containsMouse || activeFocus) ? Qt.lighter(root.accentColor, 1.08) : root.accentColor)
                 border.color: root.mainColor
                 border.width: activeFocus ? 2 : 0
                 Behavior on color { ColorAnimation { duration: 150 } }
@@ -463,7 +550,15 @@ Rectangle {
 
             Item {
                 Layout.fillHeight: true
-                Layout.minimumHeight: 0
+                Layout.minimumHeight: 8
+            }
+
+            Rectangle {
+                Layout.fillWidth: true
+                Layout.preferredHeight: 1
+                Layout.topMargin: 6
+                color: root.borderColor
+                opacity: 0.6
             }
 
             RowLayout {
@@ -522,10 +617,10 @@ Rectangle {
 
     SequentialAnimation {
         id: intro
-        PauseAnimation { duration: 120 }
+        PauseAnimation { duration: 60 }
         ParallelAnimation {
-            NumberAnimation { target: dock; property: "opacity"; to: 1; duration: 600; easing.type: Easing.OutCubic }
-            NumberAnimation { target: dockShift; property: "x"; to: 0; duration: 600; easing.type: Easing.OutCubic }
+            NumberAnimation { target: dock; property: "opacity"; to: 1; duration: 300; easing.type: Easing.OutCubic }
+            NumberAnimation { target: dockShift; property: "x"; to: 0; duration: 300; easing.type: Easing.OutCubic }
         }
     }
 

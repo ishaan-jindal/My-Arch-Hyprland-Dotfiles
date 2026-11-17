@@ -111,7 +111,7 @@ sync_wallpaper() {
 install_fallback() {
     [ -f "$THEME_DST/fallback.jpg" ] && [ "${1:-}" != "--install" ] && return 0
     if command -v magick >/dev/null 2>&1; then
-        magick -size 1920x1080 'xc:#14161c' -quality 82 "$THEME_DST/fallback.jpg"
+        magick -size 1920x1080 'xc:#0a0a0c' -quality 82 "$THEME_DST/fallback.jpg"
         chmod 644 "$THEME_DST/fallback.jpg"
         echo "sddm-deploy: fallback background written"
     fi
