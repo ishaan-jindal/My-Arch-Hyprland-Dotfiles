@@ -2,6 +2,7 @@ import QtQuick
 import Quickshell
 import Quickshell.Hyprland
 import ".."
+import "../services" as Svc
 
 // Fixed 5-dot workspace strip for the Dynamic Island.
 // Active dot uses the wallpaper accent with a soft halo, occupied is
@@ -52,8 +53,9 @@ Item {
       ws.activate();
       return;
     }
-    // Empty workspace: no object to activate, ask Hyprland to create it.
-    Quickshell.execDetached({ command: ["hyprctl", "dispatch", "workspace", String(id)] });
+    // Empty workspace: no object to activate, ask Hyprland to create it
+    // via the services facade (Lua-form dispatch; raw hyprctl fails here).
+    Svc.Workspaces.switchTo(id);
   }
 
   function cycle(delta) {

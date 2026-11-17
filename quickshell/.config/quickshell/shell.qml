@@ -6,6 +6,7 @@ import Quickshell.Networking
 import Quickshell.Bluetooth
 import "components"
 import "popups"
+import "island" as Isle
 
 // Quickshell entry point. See docs/QUICKSHELL.md.
 ShellRoot {
@@ -35,9 +36,9 @@ ShellRoot {
       ShellState.toggleSession();
     }
 
-    // qs ipc call shell toggleCenter
+    // qs ipc call shell toggleCenter — merged island hub (SUPER+C)
     function toggleCenter(): void {
-      ShellState.toggleCenter();
+      Isle.IslandState.toggleHub();
     }
 
     // qs ipc call shell toggleCalendar
@@ -45,14 +46,14 @@ ShellRoot {
       ShellState.toggleCalendar();
     }
 
-    // qs ipc call shell openCenterView wifi | bluetooth
+    // qs ipc call shell openCenterView wifi — hub wifi list (or hub)
     function openCenterView(view: string): void {
-      ShellState.openCenterView(view);
+      Isle.IslandState.openHub(view);
     }
 
-    // qs ipc call shell openCenterSection audio | system | display | power | calendar
+    // qs ipc call shell openCenterSection audio — merged hub (sections merged)
     function openCenterSection(section: string): void {
-      ShellState.openCenterSection(section);
+      Isle.IslandState.openHub("");
     }
 
     // qs ipc call shell closeAll
@@ -116,6 +117,32 @@ ShellRoot {
     // qs ipc call shell showOsd volume 0.42
     function showOsd(kind: string, value: real): void {
       ShellState.showOsd(kind, value, Math.round(value * 100) + "%");
+    }
+  }
+
+  IpcHandler {
+    target: "island"
+
+    // qs ipc call island toggle  (collapse, or open the hub)
+    function toggle(): void {
+      Isle.IslandState.toggle();
+    }
+
+    // qs ipc call island open hub  (hub | media force open; anything
+    // else releases overrides and lets the live state show through)
+    function open(state: string): void {
+      Isle.IslandState.open(state);
+    }
+
+    // qs ipc call island hide  (back to idle, dismissing overlays)
+    function hide(): void {
+      Isle.IslandState.hide();
+    }
+
+    // qs ipc call island demo notification  (idle | activity | toast |
+    // notification | urgent | media | hub — fake data, auto-clears)
+    function demo(state: string): void {
+      Isle.IslandState.demo(state);
     }
   }
 }

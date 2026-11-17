@@ -294,7 +294,7 @@ Item {
 
     Rectangle {
       anchors.fill: parent
-      color: Theme.bgSolid
+      color: Qt.rgba(Theme.bgSolid.r, Theme.bgSolid.g, Theme.bgSolid.b, 1)
       border.color: Theme.accent
       border.width: 1
       radius: Theme.radius

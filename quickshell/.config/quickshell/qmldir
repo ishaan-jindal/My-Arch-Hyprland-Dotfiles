@@ -3,3 +3,14 @@ singleton Icons 1.0 Icons.qml
 singleton Sys 1.0 Sys.qml
 singleton ShellState 1.0 ShellState.qml
 singleton Notify 1.0 Notify.qml
+singleton Config 1.0 Config.qml
+singleton IslandTheme 1.0 island/IslandTheme.qml
+singleton IslandState 1.0 island/IslandState.qml
+singleton Media 1.0 services/Media.qml
+singleton Audio 1.0 services/Audio.qml
+singleton Brightness 1.0 services/Brightness.qml
+singleton Battery 1.0 services/Battery.qml
+singleton Network 1.0 services/Network.qml
+singleton Bluetooth 1.0 services/Bluetooth.qml
+singleton Workspaces 1.0 services/Workspaces.qml
+singleton Notifs 1.0 services/Notifs.qml
