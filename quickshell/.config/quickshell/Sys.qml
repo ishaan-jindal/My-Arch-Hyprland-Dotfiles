@@ -290,6 +290,34 @@ Singleton {
     return formatDuration(batterySecondsLeft) + " left";
   }
 
+  // Warn once per discharge cycle below 15%; re-arm at 20% or while charging.
+  property bool lowBattWarned: false
+
+  function checkLowBattery() {
+    if (!hasBattery)
+      return;
+    if (batteryCharging || batteryPct >= 20) {
+      lowBattWarned = false;
+      return;
+    }
+    if (batteryPct > 15 || lowBattWarned)
+      return;
+    lowBattWarned = true;
+    lowBattProc.command = ["notify-send", "-u", "critical", "-a", "Battery",
+      "Battery low",
+      batteryPct + "% remaining" + (batteryTimeText() ? " — " + batteryTimeText() : "")];
+    lowBattProc.running = true;
+  }
+
+  // pct: catches normal drain and startup; charging: catches unplugging at <=15%.
+  onBatteryPctChanged: checkLowBattery()
+  onBatteryChargingChanged: checkLowBattery()
+
+  Process {
+    id: lowBattProc
+    command: []
+  }
+
   function formatDuration(seconds) {
     const total = Math.round(seconds);
     const h = Math.floor(total / 3600);
