@@ -570,46 +570,126 @@ Rectangle {
                     Layout.fillWidth: true
                 }
 
-                Button {
-                    visible: sddm.canSuspend
-                    Layout.preferredWidth: 40
+                // Segmented power control: one glass rail in the same
+                // language as the session card and password field —
+                // translucent field fill, 1px border hairline, dock
+                // corner radius — split into three icon cells by hairline
+                // dividers. Glyphs are Font Awesome codepoints from the
+                // Nerd Fonts patched set (the old misc-symbols glyphs
+                // U+263E/U+27F3 are absent from this font and render
+                // as tofu): U+F186 sleep, U+F021 reboot, U+F011 power.
+                Rectangle {
+                    id: powerRail
+                    visible: suspendCell.visible || rebootCell.visible || powerCell.visible
+                    Layout.preferredWidth: powerCells.implicitWidth
                     Layout.preferredHeight: 34
-                    text: "☾"
-                    color: "transparent"
-                    activeColor: root.fieldColor
-                    pressedColor: root.accentColor
-                    textColor: root.mutedColor
-                    font.family: root.fontName
-                    font.pointSize: 13
-                    onClicked: sddm.suspend()
-                }
+                    radius: root.cornerRadius
+                    color: Qt.rgba(root.fieldColor.r, root.fieldColor.g, root.fieldColor.b, 0.45)
+                    border.color: root.borderColor
+                    border.width: 1
+                    clip: true
 
-                Button {
-                    visible: sddm.canReboot
-                    Layout.preferredWidth: 40
-                    Layout.preferredHeight: 34
-                    text: "⟳"
-                    color: "transparent"
-                    activeColor: root.fieldColor
-                    pressedColor: root.accentColor
-                    textColor: root.mutedColor
-                    font.family: root.fontName
-                    font.pointSize: 13
-                    onClicked: sddm.reboot()
-                }
+                    Row {
+                        id: powerCells
+                        height: parent.height
+                        spacing: 0
 
-                Button {
-                    visible: sddm.canPowerOff
-                    Layout.preferredWidth: 40
-                    Layout.preferredHeight: 34
-                    text: "⏻"
-                    color: "transparent"
-                    activeColor: root.fieldColor
-                    pressedColor: root.accentColor
-                    textColor: root.mutedColor
-                    font.family: root.fontName
-                    font.pointSize: 13
-                    onClicked: sddm.powerOff()
+                        Rectangle {
+                            id: suspendCell
+                            visible: sddm.canSuspend
+                            width: 40
+                            height: 34
+                            color: suspendMouse.pressed ? Qt.rgba(0, 0, 0, 0.28) : (suspendMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.08) : "transparent")
+                            Behavior on color { ColorAnimation { duration: 150 } }
+
+                            Text {
+                                anchors.centerIn: parent
+                                font.family: root.fontName
+                                font.pointSize: 13
+                                color: suspendMouse.containsMouse ? root.mainColor : root.mutedColor
+                                text: "\uf186" // U+F186 fa-moon-o (sleep)
+                                Behavior on color { ColorAnimation { duration: 150 } }
+                            }
+
+                            MouseArea {
+                                id: suspendMouse
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: sddm.suspend()
+                            }
+                        }
+
+                        Rectangle {
+                            width: 1
+                            height: 20
+                            y: 7
+                            color: root.borderColor
+                            opacity: 0.7
+                            visible: suspendCell.visible && rebootCell.visible
+                        }
+
+                        Rectangle {
+                            id: rebootCell
+                            visible: sddm.canReboot
+                            width: 40
+                            height: 34
+                            color: rebootMouse.pressed ? Qt.rgba(0, 0, 0, 0.28) : (rebootMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.08) : "transparent")
+                            Behavior on color { ColorAnimation { duration: 150 } }
+
+                            Text {
+                                anchors.centerIn: parent
+                                font.family: root.fontName
+                                font.pointSize: 13
+                                color: rebootMouse.containsMouse ? root.mainColor : root.mutedColor
+                                text: "\uf021" // U+F021 fa-refresh (reboot)
+                                Behavior on color { ColorAnimation { duration: 150 } }
+                            }
+
+                            MouseArea {
+                                id: rebootMouse
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: sddm.reboot()
+                            }
+                        }
+
+                        Rectangle {
+                            width: 1
+                            height: 20
+                            y: 7
+                            color: root.borderColor
+                            opacity: 0.7
+                            visible: rebootCell.visible && powerCell.visible
+                        }
+
+                        Rectangle {
+                            id: powerCell
+                            visible: sddm.canPowerOff
+                            width: 40
+                            height: 34
+                            color: powerMouse.pressed ? Qt.rgba(0, 0, 0, 0.28) : (powerMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.08) : "transparent")
+                            Behavior on color { ColorAnimation { duration: 150 } }
+
+                            Text {
+                                anchors.centerIn: parent
+                                font.family: root.fontName
+                                font.pointSize: 13
+                                color: powerMouse.containsMouse ? root.mainColor : root.mutedColor
+                                text: "\uf011" // U+F011 fa-power-off (power)
+                                Behavior on color { ColorAnimation { duration: 150 } }
+                            }
+
+                            MouseArea {
+                                id: powerMouse
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: sddm.powerOff()
+                            }
+                        }
+                    }
                 }
             }
         }
