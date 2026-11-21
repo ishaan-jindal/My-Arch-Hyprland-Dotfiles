@@ -136,7 +136,7 @@ hl.animation({ leaf = "fadeLayersOut", enabled = true, speed = 1.39, bezier = "a
 hl.animation({ leaf = "workspaces", enabled = true, speed = 2, bezier = "quick", style = "fade" })
 hl.animation({ leaf = "workspacesIn", enabled = true, speed = 2, bezier = "quick", style = "slidefade" })
 hl.animation({ leaf = "workspacesOut", enabled = true, speed = 2, bezier = "quick", style = "slidefade" })
-hl.animation({ leaf = "specialWorkspace", enabled = true, speed = 2.5, bezier = "easeOutQuint", style = "slidefade" })
+hl.animation({ leaf = "specialWorkspace", enabled = true, speed = 2.5, bezier = "easeOutQuint", style = "slidefadevert" })
 hl.animation({ leaf = "zoomFactor", enabled = true, speed = 2.5, bezier = "easeOutQuint" })
 
 
@@ -155,7 +155,15 @@ hl.device({
 ------------------
 
 hl.gesture({ fingers = 3, direction = "horizontal", action = "workspace" })
-hl.gesture({ fingers = 3, direction = "vertical", action = "special", workspace_name = "magic" })
+
+-- Direction-aware scratchpad: swipe up pulls it from the bottom, swipe down from the top.
+local function scratchpad_from(edge)
+  hl.animation({ leaf = "specialWorkspace", enabled = true, speed = 2.5, bezier = "easeOutQuint", style = "slidefadevert " .. edge })
+  hl.dispatch(hl.dsp.workspace.toggle_special("magic"))
+end
+
+hl.gesture({ fingers = 3, direction = "up", action = function() scratchpad_from("bottom") end })
+hl.gesture({ fingers = 3, direction = "down", action = function() scratchpad_from("top") end })
 
 
 ------------------

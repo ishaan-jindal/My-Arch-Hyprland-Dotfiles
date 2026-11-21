@@ -54,7 +54,9 @@ and closes. The Wi-Fi and Bluetooth views use
 - `Super + S` → toggle special workspace (`magic`)
 - `Super + Shift + S` → move active window to special workspace
 - `Super + mouse wheel` → cycle workspaces
-- `3-finger swipe` → switch workspaces / special workspace
+- `3-finger horizontal swipe` → switch workspaces
+- `3-finger swipe up` → scratchpad (`magic`) slides in from the bottom
+- `3-finger swipe down` → scratchpad (`magic`) slides in from the top
 
 ## Clipboard and screenshots
 
